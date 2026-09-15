@@ -47,7 +47,8 @@ function DrawerRow({
 }
 
 export function DrawerScreen({ api }: { api: PrototypeApi }) {
-  const { actions, ctx } = api
+  const { actions, ctx, report } = api
+  const hasReport = !!report
 
   return (
     <>
@@ -112,12 +113,13 @@ export function DrawerScreen({ api }: { api: PrototypeApi }) {
               bg="#fff"
               border="#ebe9e3"
               iconBg="#efece5"
-              icon={<ProcessingIcon size={19} stroke="#8a857c" />}
+              icon={<ProcessingIcon size={19} stroke={hasReport ? '#4a4842' : '#8a857c'} />}
               title="Report history"
               titleColor="#1c3d59"
               subtitle="Reports you have filed"
               subtitleColor="#4a4842"
-              disabled
+              onClick={hasReport ? actions.drawerReportHistory : undefined}
+              disabled={!hasReport}
             />
           </div>
         </div>

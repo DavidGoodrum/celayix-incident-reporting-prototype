@@ -42,9 +42,9 @@
   <div class="font-bold text-[15px] text-navy mb-1">Team Xpress · Incident reporting — click-through prototype</div>
   <div class="text-[13px] mb-5 text-center max-w-[460px]" style="color:rgba(28,61,89,.6);text-wrap:pretty">
     Follows the final settled flow: report from the app bar, inline attachments via the platform's own picker, editable incident
-    details, and follow-ups added to an already-filed report. Emergency's entry point is an open question in the current canvas —
-    the persistent alert bar has been removed, so it now lives behind a long-press on the flag icon (mirroring the new
-    actions-drawer concept) while a normal tap still goes straight to the note.
+    details, and follow-ups added to an already-filed report. The persistent alert bar is gone: a tap on the app-bar clipboard icon
+    opens the report actions drawer, where Emergency sits as a hold-to-send card. A long press on the same icon jumps straight to
+    the incident note.
   </div>
 
   <div class="w-[390px] p-[7px] bg-[#e3dfd7] rounded-[44px] shadow-[0_24px_48px_-12px_rgba(17,17,17,.2)] flex-none">
@@ -169,12 +169,12 @@ const actions = {
     if (pressTimer) clearTimeout(pressTimer);
     pressTimer = setTimeout(() => {
       pressFired = true;
-      actions.openDrawer(from);
+      actions.openReport(from);
     }, 480);
   },
   endFlagPress() {
     if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-    if (!pressFired && pressFrom) actions.openReport(pressFrom);
+    if (!pressFired && pressFrom) actions.openDrawer(pressFrom);
     pressFrom = null;
   },
   openDrawer(from) {
@@ -317,15 +317,30 @@ const actions = {
     }
   },
   goToReports() { patch({ prevScreen: state.screen, screen: 'reports' }); },
-  backFromReports() { patch({ screen: state.prevScreen || 'shift' }); },
+  backFromReports() {
+    let back = state.prevScreen;
+    if (!back || back === 'reports' || back === 'drawer') back = 'shift';
+    patch({ screen: back });
+  },
   openQueuedDetail() { patch({ screen: 'reportProcessing', justSubmitted: false }); },
   doneSubmitted() {
+    if (!state.justSubmitted) {
+      let back = state.prevScreen;
+      if (!back || back === 'reports' || back === 'drawer') back = 'shift';
+      patch({ screen: back });
+      return;
+    }
     const from = state.reportFrom;
     patch({
       justSubmitted: false,
       bannerDismissed: false,
       screen: from === 'note' || from === 'reports' ? 'shift' : (from || 'shift'),
     });
+  },
+  drawerReportHistory() {
+    let back = state.preDrawerScreen;
+    if (!back || back === 'reports' || back === 'drawer') back = 'shift';
+    patch({ screen: 'reports', prevScreen: back });
   },
   backFromDetail() {
     if (state.justSubmitted) { actions.doneSubmitted(); return; }
@@ -928,7 +943,7 @@ function renderReportDetail() {
       <span class="flex-1 flex h-12 border border-[#d9d6ce] rounded-xl bg-white items-center justify-center gap-2 font-bold text-[16px] text-navy cursor-pointer active:opacity-70" data-action="openFollowUp">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1c3d59" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Add follow-up
       </span>
-      ${s.justSubmitted ? `<span class="flex-1 flex h-12 rounded-xl bg-brand items-center justify-center font-bold text-[16px] text-white cursor-pointer active:opacity-70" data-action="doneSubmitted">Done</span>` : ''}
+      <span class="flex-1 flex h-12 rounded-xl bg-brand items-center justify-center font-bold text-[16px] text-white cursor-pointer active:opacity-70" data-action="doneSubmitted">Done</span>
     </div>
   </div>`;
 }
@@ -942,6 +957,7 @@ function drawerRow(bg, border, iconBg, iconHtml, title, titleColor, subtitle, su
 
 function renderDrawer() {
   const ctx = contextParts();
+  const hasReport = !!state.report;
   return `
   ${statusBar('4:12', '#1c3d59', '#fafaf7')}
   <div class="relative flex-1 overflow-hidden">
@@ -955,7 +971,7 @@ function renderDrawer() {
         ${drawerRow('#fff', '#ebe9e3', '#ffeee0', icon.clipboard('#ff5c00', 19), 'Incident report', '#1c3d59', 'Note, photos and video', '#4a4842', 'drawerIncidentReport')}
         ${drawerRow('#fff', '#ebe9e3', '#efece5', icon.documentStroke('#8a857c', 19), 'Other reports', '#1c3d59', 'Vehicle, maintenance and site forms', '#4a4842', null, true)}
         ${drawerRow('#fff', '#ebe9e3', '#efece5', `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8a857c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17V7a2 2 0 0 1 2-2h7l3 3h4a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m10 14 4-4-4-4"/></svg>`, 'Shift pass-down', '#1c3d59', 'Hand over between shifts', '#4a4842', null, true)}
-        ${drawerRow('#fff', '#ebe9e3', '#efece5', icon.processing('#8a857c', 19), 'Report history', '#1c3d59', 'Reports you have filed', '#4a4842', null, true)}
+        ${drawerRow('#fff', '#ebe9e3', '#efece5', icon.processing(hasReport ? '#4a4842' : '#8a857c', 19), 'Report history', '#1c3d59', 'Reports you have filed', '#4a4842', hasReport ? 'drawerReportHistory' : null, !hasReport)}
       </div>
     </div>
   </div>`;
