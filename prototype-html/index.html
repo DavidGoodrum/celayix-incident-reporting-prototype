@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Team Xpress · Incident Reporting Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Lato', 'system-ui', 'sans-serif'] },
+        colors: {
+          navy: '#1c3d59',
+          ink: '#4a4842',
+          muted: '#8a857c',
+          brand: '#ff5c00',
+          danger: '#b91c1c',
+          accent: '#105d86',
+        },
+      },
+    },
+  }
+</script>
+<style>
+  html, body { background: #f2efe9; font-family: Lato, system-ui, sans-serif; }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .wheel-mask {
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 25%, #000 75%, transparent);
+    mask-image: linear-gradient(180deg, transparent, #000 25%, #000 75%, transparent);
+  }
+  textarea.note-input { border: none; outline: none; resize: none; background: transparent; font-family: Lato, sans-serif; }
+  textarea.note-input::placeholder { color: #a8a29a; }
+</style>
+</head>
+<body>
+<div class="min-h-screen flex flex-col items-center py-10 px-5">
+  <div class="font-bold text-[15px] text-navy mb-1">Team Xpress · Incident reporting — click-through prototype</div>
+  <div class="text-[13px] mb-5 text-center max-w-[460px]" style="color:rgba(28,61,89,.6);text-wrap:pretty">
+    Follows the final settled flow: report from the app bar, inline attachments via the platform's own picker, editable incident
+    details, and follow-ups added to an already-filed report. Emergency's entry point is an open question in the current canvas —
+    the persistent alert bar has been removed, so it now lives behind a long-press on the flag icon (mirroring the new
+    actions-drawer concept) while a normal tap still goes straight to the note.
+  </div>
+
+  <div class="w-[390px] p-[7px] bg-[#e3dfd7] rounded-[44px] shadow-[0_24px_48px_-12px_rgba(17,17,17,.2)] flex-none">
+    <div id="screen" class="w-[376px] h-[812px] rounded-[38px] overflow-hidden flex flex-col relative"></div>
+  </div>
+
+  <button id="resetBtn" class="font-bold text-xs text-navy bg-white border border-[#d9d6ce] rounded-full px-4 py-[7px] mt-5 hover:border-brand hover:text-brand">
+    Reset prototype
+  </button>
+</div>
+
+<script>
+/* Team Xpress · Incident Reporting — vanilla JS prototype logic.
+   This file is inlined into index.html for the standalone deliverable;
+   kept separate here only while drafting for easier editing. */
+
+const CHECKPOINTS = ['Front Door', 'Reception', 'Courtyard', 'North Parking Lot'];
+const DICTATED =
+  'Tree came down across the north parking spaces, blocking three bays and the fire lane. Branches are on a parked car.';
+
+function buildDayLabels() {
+  const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const days = ['Today', 'Yesterday'];
+  const base = new Date(2026, 8, 15);
+  for (let d = 2; d < 14; d++) {
+    const dt = new Date(base.getTime() - d * 86400000);
+    days.push(`${names[dt.getDay()]} ${months[dt.getMonth()]} ${dt.getDate()}`);
+  }
+  return days;
+}
+const DAYS = buildDayLabels();
+
+function parseTime(str) {
+  let day = 0;
+  for (let i = 0; i < DAYS.length; i++) {
+    if (str.indexOf(DAYS[i]) === 0) { day = i; break; }
+  }
+  const m = /(\d{1,2}):(\d{2})\s*(AM|PM)/.exec(str);
+  return {
+    day,
+    hour: m ? (parseInt(m[1], 10) === 12 ? 11 : parseInt(m[1], 10) - 1) : 3,
+    min: m ? parseInt(m[2], 10) : 12,
+    mer: m && m[3] === 'AM' ? 0 : 1,
+  };
+}
+
+function initialState() {
+  return {
+    screen: 'shift',
+    checkedIn: true,
+    prevScreen: 'shift',
+    reportFrom: 'shift',
+    composeMode: 'new',
+    noteText: '',
+    attachments: [],
+    requiresAttention: false,
+    checkpoint: null,
+    time: null,
+    pendingCheckpoint: null,
+    pendingTime: null,
+    attachSheetOpen: false,
+    keyboardOpen: false,
+    dictating: false,
+    checkpointListOpen: false,
+    report: null,
+    emergencyActive: false,
+    emergencyCount: 3,
+    preDrawerScreen: 'shift',
+    timePickerOpen: false,
+    tpDay: 0,
+    tpHour: 3,
+    tpMin: 12,
+    tpMer: 1,
+    justSubmitted: false,
+    bannerDismissed: false,
+  };
+}
+
+let state = initialState();
+
+let emergencyTimer = null;
+let emergencyEndTimer = null;
+let pressTimer = null;
+let pressFrom = null;
+let pressFired = false;
+const wheelTimers = {};
+const wheelEls = {};
+const colKey = { day: 'tpDay', hour: 'tpHour', min: 'tpMin', mer: 'tpMer' };
+
+function patch(p) {
+  Object.assign(state, p);
+  render();
+}
+
+function contextParts() {
+  const s = state;
+  const tour = s.reportFrom === 'tour' || s.reportFrom === 'checkpoint' ? 'Opening Check' : null;
+  const checkpoint = s.checkpoint || (s.reportFrom === 'checkpoint' ? 'Front Door' : null);
+  let line1;
+  if (!tour && !checkpoint) {
+    line1 = s.checkedIn ? 'Police Museum · Current Shift' : 'No active shift';
+  } else {
+    line1 = ['Police Museum', tour, checkpoint].filter(Boolean).join(' · ');
+  }
+  const line2 = s.time || 'Today, 4:12 PM';
+  return { line1, line2, tour: tour || '—' };
+}
+
+/* ---------- actions ---------- */
+
+const actions = {
+  goTo(screen) { patch({ screen }); },
+  goToShift() { patch({ screen: 'shift' }); },
+  goToTour() { patch({ screen: 'tour' }); },
+  goToCheckpoint() { patch({ screen: 'checkpoint' }); },
+  cancelNote() { patch({ screen: state.prevScreen }); },
+
+  startFlagPress(from) {
+    pressFrom = from;
+    pressFired = false;
+    if (pressTimer) clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+      pressFired = true;
+      actions.openDrawer(from);
+    }, 480);
+  },
+  endFlagPress() {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    if (!pressFired && pressFrom) actions.openReport(pressFrom);
+    pressFrom = null;
+  },
+  openDrawer(from) {
+    patch({ screen: 'drawer', preDrawerScreen: state.screen, reportFrom: from });
+  },
+  closeDrawer() {
+    patch({ screen: state.preDrawerScreen || 'shift' });
+  },
+  drawerEmergency(e) {
+    if (e) e.stopPropagation();
+    actions.holdEmergency();
+  },
+  drawerIncidentReport(e) {
+    if (e) e.stopPropagation();
+    patch({
+      screen: 'note',
+      prevScreen: state.reportFrom,
+      composeMode: 'new',
+      noteText: '',
+      attachments: [],
+      requiresAttention: false,
+      checkpoint: null,
+      time: null,
+    });
+  },
+  openReport(from) {
+    patch({
+      screen: 'note',
+      prevScreen: from,
+      reportFrom: from,
+      composeMode: 'new',
+      noteText: '',
+      attachments: [],
+      requiresAttention: false,
+      checkpoint: null,
+      time: null,
+    });
+  },
+  openFollowUp() {
+    patch({
+      screen: 'note',
+      prevScreen: state.screen,
+      composeMode: 'followup',
+      noteText: '',
+      attachments: [],
+      requiresAttention: false,
+    });
+  },
+  onNoteInput(value) { state.noteText = value; },
+  showKeyboard() { patch({ keyboardOpen: true }); },
+  hideKeyboard() { patch({ keyboardOpen: false, dictating: false }); },
+  dictate() {
+    if (state.dictating) { patch({ dictating: false }); return; }
+    const existing = state.noteText.trim();
+    const next = existing ? `${existing} ${DICTATED}` : DICTATED;
+    patch({ dictating: true, noteText: next });
+  },
+  addAttachment() {
+    if (state.attachments.length >= 20) return;
+    patch({ attachments: [...state.attachments, { type: 'photo' }] });
+  },
+  removeAttachment(index) {
+    const a = state.attachments.slice();
+    a.splice(index, 1);
+    patch({ attachments: a });
+  },
+  toggleAttention() { patch({ requiresAttention: !state.requiresAttention }); },
+  openAttachSheet() { patch({ attachSheetOpen: true }); },
+  closeAttachSheet() { patch({ attachSheetOpen: false }); },
+  pickAttachment() {
+    actions.addAttachment();
+    patch({ attachSheetOpen: false });
+  },
+  openDetails() {
+    patch({
+      screen: 'details',
+      checkpointListOpen: false,
+      pendingCheckpoint: state.checkpoint,
+      pendingTime: state.time,
+    });
+  },
+  toggleCheckpointList() { patch({ checkpointListOpen: !state.checkpointListOpen }); },
+  pickCheckpoint(name) { patch({ pendingCheckpoint: name, checkpointListOpen: false }); },
+  openTimePicker() {
+    const parsed = parseTime(state.pendingTime || 'Today, 4:12 PM');
+    patch({
+      timePickerOpen: true,
+      checkpointListOpen: false,
+      tpDay: parsed.day,
+      tpHour: parsed.hour,
+      tpMin: parsed.min,
+      tpMer: parsed.mer,
+    });
+  },
+  closeTimePicker() { patch({ timePickerOpen: false }); },
+  doneTimePicker() {
+    const label = `${DAYS[state.tpDay]}, ${state.tpHour + 1}:${String(state.tpMin).padStart(2, '0')} ${state.tpMer === 0 ? 'AM' : 'PM'}`;
+    patch({ pendingTime: label, timePickerOpen: false });
+  },
+  wheelScroll(col, el) {
+    clearTimeout(wheelTimers[col]);
+    wheelTimers[col] = setTimeout(() => {
+      const idx = Math.round(el.scrollTop / 36);
+      const key = colKey[col];
+      if (state[key] !== idx) { state[key] = idx; }
+    }, 110);
+  },
+  wheelTap(col, idx) {
+    const el = wheelEls[col];
+    if (el) el.scrollTo({ top: idx * 36, behavior: 'smooth' });
+    const key = colKey[col];
+    state[key] = idx;
+  },
+  saveDetails() {
+    patch({ checkpoint: state.pendingCheckpoint, time: state.pendingTime, screen: 'note' });
+  },
+  cancelDetails() { patch({ screen: 'note' }); },
+  submitReport() {
+    if (!state.noteText.trim()) return;
+    if (state.composeMode === 'followup' && state.report) {
+      const report = Object.assign({}, state.report);
+      report.followUps = report.followUps.concat([{
+        text: state.noteText.trim(),
+        attachments: state.attachments.slice(),
+        requiresAttention: state.requiresAttention,
+        time: `6:0${2 + report.followUps.length} PM`,
+      }]);
+      if (state.requiresAttention) report.requiresAttention = true;
+      patch({ report, screen: state.prevScreen });
+    } else {
+      const newReport = {
+        text: state.noteText.trim(),
+        requiresAttention: state.requiresAttention,
+        checkpoint: state.checkpoint,
+        time: state.time,
+        attachments: state.attachments.slice(),
+        followUps: [],
+      };
+      patch({ report: newReport, screen: 'reportProcessing', justSubmitted: true, bannerDismissed: false });
+    }
+  },
+  goToReports() { patch({ prevScreen: state.screen, screen: 'reports' }); },
+  backFromReports() { patch({ screen: state.prevScreen || 'shift' }); },
+  openQueuedDetail() { patch({ screen: 'reportProcessing', justSubmitted: false }); },
+  doneSubmitted() {
+    const from = state.reportFrom;
+    patch({
+      justSubmitted: false,
+      bannerDismissed: false,
+      screen: from === 'note' || from === 'reports' ? 'shift' : (from || 'shift'),
+    });
+  },
+  backFromDetail() {
+    if (state.justSubmitted) { actions.doneSubmitted(); return; }
+    patch({ screen: 'reports' });
+  },
+  dismissBanner() { patch({ bannerDismissed: true }); },
+  simulateSync() { patch({ screen: 'reportSynced' }); },
+  checkOut() { patch({ checkedIn: false }); },
+  checkIn() { patch({ checkedIn: true }); },
+  holdEmergency() {
+    if (emergencyTimer) clearInterval(emergencyTimer);
+    if (emergencyEndTimer) clearTimeout(emergencyEndTimer);
+    const underlyingScreen = state.screen === 'drawer' ? (state.preDrawerScreen || 'shift') : state.screen;
+    patch({ emergencyActive: true, screen: underlyingScreen, prevScreen: underlyingScreen, emergencyCount: 3 });
+    emergencyTimer = setInterval(() => {
+      const n = state.emergencyCount - 1;
+      if (n <= 0) {
+        clearInterval(emergencyTimer);
+        emergencyTimer = null;
+        state.emergencyCount = 0;
+        render();
+        emergencyEndTimer = setTimeout(() => patch({ emergencyActive: false }), 1400);
+      } else {
+        patch({ emergencyCount: n });
+      }
+    }, 900);
+  },
+  releaseEmergency() {
+    if (emergencyTimer) { clearInterval(emergencyTimer); emergencyTimer = null; }
+    patch({ emergencyActive: false });
+  },
+  resetAll() {
+    if (emergencyTimer) { clearInterval(emergencyTimer); emergencyTimer = null; }
+    if (emergencyEndTimer) { clearTimeout(emergencyEndTimer); emergencyEndTimer = null; }
+    state = initialState();
+    render();
+  },
+};
+
+/* ---------- icon helpers (return raw SVG markup strings) ---------- */
+
+const icon = {
+  chevronLeft(stroke = '#1c3d59', size = 22) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>`;
+  },
+  chevronRight(stroke = '#a8a29a', size = 17) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+  },
+  check(stroke = '#fff', size = 15, sw = 3) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+  },
+  plus(stroke = '#4a4842', size = 20) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+  },
+  clipboard(stroke = '#1c3d59', size = 19) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M8 12h8M8 16h5"/></svg>`;
+  },
+  bell(stroke = '#1c3d59', size = 23) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>`;
+  },
+  lock(stroke = '#8a857c', size = 15) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+  },
+  documentFill(fill = '#5b5651', size = 20) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`;
+  },
+  documentStroke(stroke = '#5b5651', size = 20) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-4 4 3 3-2 6 5"/></svg>`;
+  },
+  sparkle(stroke = '#105d86', size = 15) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/></svg>`;
+  },
+  processing(stroke = '#8a857c', size = 15) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.4" stroke-linecap="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>`;
+  },
+  warning(stroke = '#fff', size = 12) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>`;
+  },
+  x(stroke = '#8a857c', size = 14) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  },
+  location(stroke = '#8a857c', size = 18) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
+  },
+};
+
+/* ---------- shared bits ---------- */
+
+function statusBar(time, color, bg) {
+  return `<div class="h-11 flex-none flex items-center justify-between px-6 pl-[26px] font-bold text-[15px]" style="color:${color};${bg ? `background:${bg}` : ''}">
+    ${time}
+    <span class="flex items-center gap-[5px]">
+      <span class="w-[6px] h-[6px] rounded-full" style="background:${color}"></span>
+      <span class="w-2 h-2 rounded-full" style="background:${color}"></span>
+      <span class="w-[26px] h-3 rounded-[6px]" style="background:${color}"></span>
+    </span>
+  </div>`;
+}
+
+function headerRow(title, backAction, trailingHtml, bg = '#fafaf7') {
+  const back = backAction
+    ? `<span class="cursor-pointer active:opacity-70" data-action="${backAction}">${icon.chevronLeft()}</span>`
+    : `<span class="w-[22px] flex-none"></span>`;
+  return `<div class="h-[52px] flex-none flex items-center gap-2 px-5 relative" style="background:${bg}">
+    ${back}
+    <span class="absolute inset-0 flex items-center justify-center font-bold text-[17px] text-navy pointer-events-none">${title}</span>
+    <span class="flex-1"></span>
+    ${trailingHtml || ''}
+  </div>`;
+}
+
+function reportFlagButton(from, light) {
+  return `<span class="w-[34px] h-[34px] rounded-full flex items-center justify-center flex-none cursor-pointer active:opacity-70"
+      style="background:${light ? 'rgba(255,255,255,.22)' : '#efece5'}"
+      data-pressstart="${from}" data-pressend="1">
+      ${icon.clipboard(light ? '#fff' : '#1c3d59')}
+    </span>`;
+}
+
+function bottomNav() {
+  const items = [
+    ['DASHBOARD', true],
+    ['SCHEDULE', false],
+    ['TIMESHEETS', false],
+    ['MY ACCOUNT', false],
+  ];
+  return `<div class="border-t border-[#ebe9e3] bg-[#f7f6f3] pt-2 pb-5 px-1.5 flex flex-none">
+    ${items.map(([label, active]) => `
+      <span class="flex-1 flex flex-col items-center gap-1">
+        <span class="w-[22px] h-[22px] rounded-full" style="background:${active ? '#ff5c00' : '#5b5651'};opacity:${active ? 1 : 0.85}"></span>
+        <span class="font-bold text-[10.5px] tracking-[.02em]" style="color:${active ? '#ff5c00' : '#5b5651'}">${label}</span>
+      </span>`).join('')}
+  </div>`;
+}
+
+/* ---------- screens ---------- */
+
+function renderShift() {
+  const s = state;
+  if (s.checkedIn) {
+    return `
+    <div style="background:#ff5c00" class="flex-none">
+      ${statusBar('4:12', '#fff')}
+      <div class="h-14 flex items-center px-[18px] gap-1.5 relative">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="11"/><path d="M12 17.6a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3zM12 4.2c-2.4 0-4.1 1.5-4.3 3.8h2.3c.1-1.1.8-1.8 2-1.8 1.1 0 1.9.7 1.9 1.7 0 .8-.4 1.3-1.4 2-1.2.8-1.7 1.6-1.6 3v.7h2.2v-.5c0-1 .4-1.5 1.5-2.2 1.3-.9 1.9-1.8 1.9-3.2 0-2.1-1.7-3.5-4.5-3.5z" fill="#ff5c00"/></svg>
+        <span class="absolute inset-0 flex items-center justify-center font-bold text-lg text-white pointer-events-none">Dashboard</span>
+        <span class="flex-1"></span>
+        <span class="relative flex cursor-pointer" data-action="goToReports">${icon.bell('#fff')}</span>
+        <span class="ml-1.5">${reportFlagButton('shift', true)}</span>
+      </div>
+    </div>
+    <div class="flex items-center justify-between px-5 py-[11px] text-[13px] text-ink border-b border-[#ebe9e3] flex-none">
+      <span>No missing actions</span><span class="text-brand font-bold">Current shift</span><span>No upcoming shifts</span>
+    </div>
+    <div class="text-center px-5 pt-4 flex-none">
+      <div class="font-bold text-[30px] text-navy tracking-[-.02em]">March 24, 2026</div>
+      <div class="text-[16px] text-ink mt-1">4:12 pm - 11:12 pm</div>
+    </div>
+    <div class="mx-5 mt-2.5 border border-[#ebe9e3] rounded-2xl bg-white px-3.5 py-2.5 flex items-center gap-3.5 flex-none cursor-pointer active:opacity-70" data-action="checkOut">
+      <span class="w-10 h-10 rounded-full bg-[#ecfdf4] flex items-center justify-center flex-none">${icon.check('#15803d', 20, 2.4)}</span>
+      <span>
+        <span class="block font-bold text-[16px] text-navy">Checked in 4:12 pm</span>
+        <span class="block text-[13.5px] text-ink mt-px">Tap to check out</span>
+      </span>
+    </div>
+    <div class="flex gap-6 px-[22px] pt-[18px] border-b border-[#ebe9e3] flex-none">
+      <span class="font-bold text-sm tracking-[.04em] text-brand pb-2 border-b-2 border-brand">DETAILS</span>
+      <span class="text-sm tracking-[.04em] text-ink pb-2">MAP</span>
+      <span class="text-sm tracking-[.04em] text-ink pb-2">ACTIVITIES</span>
+      <span class="text-sm tracking-[.04em] text-ink pb-2">LOG</span>
+    </div>
+    <div class="flex-1 overflow-auto">
+      <div class="flex items-center gap-4 px-5 py-2.5 border-b border-[#ebe9e3]">
+        <span class="w-[22px] flex justify-center flex-none">${icon.documentFill()}</span>
+        <span class="flex-1 text-[16px] text-[#3d4b56]">Documents</span>
+        <span class="flex items-center gap-2.5"><span class="min-w-6 h-6 rounded-full bg-brand flex items-center justify-center font-bold text-[13px] text-white px-1.5">4</span>${icon.chevronRight()}</span>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-2.5 border-b border-[#ebe9e3] cursor-pointer" data-action="goToTour">
+        <span class="w-[22px] flex justify-center flex-none">${icon.documentFill()}</span>
+        <span class="flex-1 text-[16px] text-[#3d4b56]">Tours</span>
+        <span class="flex items-center gap-2.5"><span class="min-w-6 h-6 rounded-full bg-brand flex items-center justify-center font-bold text-[13px] text-white px-1.5">7</span>${icon.chevronRight()}</span>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-2.5 border-b border-[#ebe9e3] cursor-pointer" data-action="goToReports">
+        <span class="w-[22px] flex justify-center flex-none">${icon.documentFill()}</span>
+        <span class="flex-1 text-[16px] text-[#3d4b56]">Reports</span>
+        <span class="flex items-center gap-2.5"><span class="min-w-6 h-6 rounded-full bg-brand flex items-center justify-center font-bold text-[13px] text-white px-1.5">${s.report ? 1 : 0}</span>${icon.chevronRight()}</span>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-2.5 border-b border-[#ebe9e3]">
+        <span class="w-[22px] flex justify-center flex-none"><svg width="20" height="20" viewBox="0 0 24 24" fill="#5b5651"><path d="M7 2h2v2h6V2h2v2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2zM5 10v10h14V10z"/></svg></span>
+        <span class="flex-1 text-[16px] text-[#3d4b56]">Shift date</span>
+        <span class="font-bold text-[16px] text-navy">03/24/2026</span>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-2.5 border-b border-[#ebe9e3]">
+        <span class="flex-1 text-[16px] text-[#3d4b56]">Customer</span><span class="font-bold text-[16px] text-navy">Museum Group</span>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-2.5">
+        <span class="flex-1 text-[16px] text-[#3d4b56]">Site</span><span class="font-bold text-[16px] text-navy">Police Museum</span>
+      </div>
+    </div>
+    <div class="border-t border-[#ebe9e3] px-5 py-3.5 flex gap-3 flex-none">
+      <span class="flex-1 h-12 rounded-xl bg-brand flex items-center justify-center gap-2 font-bold text-[16px] text-white cursor-pointer active:opacity-70" data-action="goToTour">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>Start Tour
+      </span>
+    </div>
+    ${bottomNav()}`;
+  }
+
+  return `
+  <div style="background:#fafaf7" class="flex-none">
+    ${statusBar('4:53', '#1c3d59')}
+    <div class="h-14 flex items-center px-[18px] gap-1.5 relative">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="#1c3d59"><circle cx="12" cy="12" r="11"/><path d="M12 17.6a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3zM12 4.2c-2.4 0-4.1 1.5-4.3 3.8h2.3c.1-1.1.8-1.8 2-1.8 1.1 0 1.9.7 1.9 1.7 0 .8-.4 1.3-1.4 2-1.2.8-1.7 1.6-1.6 3v.7h2.2v-.5c0-1 .4-1.5 1.5-2.2 1.3-.9 1.9-1.8 1.9-3.2 0-2.1-1.7-3.5-4.5-3.5z" fill="#fff"/></svg>
+      <span class="absolute inset-0 flex items-center justify-center font-bold text-lg text-navy pointer-events-none">Dashboard</span>
+      <span class="flex-1"></span>
+      <span class="relative flex cursor-pointer" data-action="goToReports">${icon.bell()}</span>
+      <span class="ml-1.5">${reportFlagButton('shift', false)}</span>
+    </div>
+  </div>
+  <div class="flex items-center justify-between px-5 py-[11px] text-[13px] text-ink border-b border-[#ebe9e3] flex-none">
+    <span>No missing actions</span><span>No current shift</span><span>Next shift 8am</span>
+  </div>
+  <div class="flex-1 flex flex-col items-center justify-center px-10 text-center cursor-pointer active:opacity-70" data-action="checkIn">
+    <div class="w-14 h-14 rounded-full bg-[#efece5] flex items-center justify-center">${icon.check('#8a857c', 28, 1.8)}</div>
+    <div class="font-bold text-[19px] text-navy mt-4">Checked out at 4:52 pm</div>
+    <div class="text-[14.5px] text-ink mt-1.5" style="text-wrap:pretty">No shift to file against, so Report falls back to an off-shift report. Tap here to check back in.</div>
+  </div>
+  ${bottomNav()}`;
+}
+
+function renderTour() {
+  return `
+  ${statusBar('4:12', '#1c3d59', '#fafaf7')}
+  ${headerRow('Opening Check', 'goToShift', reportFlagButton('tour', false))}
+  <div class="bg-[#fafaf7] flex-1 overflow-auto">
+    <div class="px-[22px] pt-3.5 pb-1 flex items-center gap-2">
+      <span class="font-bold text-[16px] text-navy">Checkpoints</span><span class="text-ink">·</span><span class="text-[14px] text-ink">3 total</span>
+    </div>
+    <div class="px-[22px] py-2 flex flex-col gap-3">
+      <div class="bg-white border-[1.5px] border-brand rounded-2xl px-[15px] py-4 flex items-center gap-3.5 cursor-pointer active:opacity-70" data-action="goToCheckpoint">
+        <span class="w-[34px] h-[34px] rounded-full bg-[#ffeee0] flex items-center justify-center flex-none"><span class="w-3.5 h-3.5 rounded-full border-2 border-brand"></span></span>
+        <span class="flex-1"><span class="block font-bold text-[16px] text-navy">Front Door</span><span class="block text-[14px] text-ink mt-0.5">Main Access · Scan ready</span></span>
+        ${icon.chevronRight('#ff5c00')}
+      </div>
+      <div class="bg-[#efece5] border border-[#ebe9e3] rounded-2xl px-[15px] py-4 flex items-center gap-3.5">
+        <span class="w-[34px] h-[34px] rounded-full bg-[#ebe9e3] flex items-center justify-center flex-none">${icon.lock()}</span>
+        <span class="flex-1"><span class="block font-bold text-[16px] text-navy">Reception</span><span class="block text-[14px] text-ink mt-0.5">Available after Front Door</span></span>
+      </div>
+      <div class="bg-[#efece5] border border-[#ebe9e3] rounded-2xl px-[15px] py-4 flex items-center gap-3.5">
+        <span class="w-[34px] h-[34px] rounded-full bg-[#ebe9e3] flex items-center justify-center flex-none">${icon.lock()}</span>
+        <span class="flex-1"><span class="block font-bold text-[16px] text-navy">Courtyard</span><span class="block text-[14px] text-ink mt-0.5">Available after Reception</span></span>
+      </div>
+    </div>
+  </div>
+  <div class="border-t border-[#ebe9e3] bg-[#fafaf7] px-[22px] pt-3.5 pb-[26px] flex-none cursor-pointer active:opacity-70" data-action="goToShift">
+    <span class="flex h-12 border border-[#d9d6ce] rounded-xl bg-white items-center justify-center font-bold text-[16px] text-navy">End tour</span>
+  </div>`;
+}
+
+function renderCheckpoint() {
+  return `
+  ${statusBar('4:12', '#1c3d59', '#fafaf7')}
+  ${headerRow('Checkpoint details', 'goToTour', reportFlagButton('checkpoint', false))}
+  <div class="bg-[#fafaf7] flex-1">
+    <div class="text-center px-[22px] pt-5">
+      <div class="font-bold text-[13px] text-ink">Opening Check tour</div>
+      <div class="font-bold text-[21px] text-navy mt-1">Front Door</div>
+      <div class="text-[15px] text-ink mt-0.5">Main Access</div>
+    </div>
+    <div class="mx-5 mt-5 bg-white border border-[#ebe9e3] rounded-2xl">
+      <div class="p-4"><div class="font-bold text-[15px] text-navy">Description</div><div class="text-[15px] text-ink mt-2.5">Public front entrance.</div></div>
+      <div class="h-px bg-[#efece5]"></div>
+      <div class="p-4"><div class="font-bold text-[15px] text-navy">Instructions</div><div class="text-[15px] text-ink mt-2.5">Confirm the door is secure before moving on.</div></div>
+    </div>
+  </div>
+  <div class="border-t border-[#ebe9e3] bg-[#fafaf7] px-[22px] pt-3.5 pb-[26px] flex gap-3.5 flex-none">
+    <span class="flex-1 h-12 border border-[#d9d6ce] rounded-xl bg-white flex items-center justify-center font-bold text-[16px] text-navy cursor-pointer active:opacity-70" data-action="goToTour">Skip</span>
+    <span class="flex-1 h-12 rounded-xl bg-brand flex items-center justify-center gap-2 font-bold text-[16px] text-white cursor-pointer active:opacity-70" data-action="goToTour">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" opacity=".35"/><path d="M9.5 12h5M12 9.5v5"/></svg>Scan
+    </span>
+  </div>`;
+}
+
+const KEY_ROW_1 = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'];
+const KEY_ROW_2 = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'];
+const KEY_ROW_3 = ['z', 'x', 'c', 'v', 'b', 'n', 'm'];
+
+function key(label, wide) {
+  const style = wide ? `flex:${wide};background:#b7b2a9;font-size:14px` : `flex:1`;
+  return `<span class="bg-white rounded-[5px] h-[38px] flex items-center justify-center text-[17px] text-navy shadow-[0_1px_0_rgba(0,0,0,.25)]" style="${style}">${label}</span>`;
+}
+
+function renderNote() {
+  const s = state;
+  const ctx = contextParts();
+  const composeTitle = s.composeMode === 'followup' ? 'Add follow-up' : 'New incident';
+  const canSubmit = !!s.noteText.trim();
+  const showKeyboard = s.keyboardOpen && s.screen === 'note' && !s.attachSheetOpen;
+
+  return `
+  ${statusBar('4:12', '#1c3d59', '#fafaf7')}
+  <div class="h-[52px] flex-none flex items-center gap-3.5 px-5 bg-[#fafaf7] relative">
+    <span class="cursor-pointer active:opacity-70" data-action="cancelNote">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1c3d59" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </span>
+    <span class="absolute inset-0 flex items-center justify-center font-bold text-[17px] text-navy pointer-events-none">${composeTitle}</span>
+    <span class="flex-1"></span><span class="w-[22px] flex-none"></span>
+  </div>
+  <div class="px-5 py-2.5 flex items-center gap-2 border-b border-[#ebe9e3] flex-none bg-[#fafaf7] cursor-pointer active:opacity-70" data-action="openDetails">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a857c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-none"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <span class="flex-1 min-w-0"><span class="block text-[13.5px] text-ink">${ctx.line1}</span><span class="block text-[12.5px] text-muted mt-0.5">${ctx.line2}</span></span>
+    ${icon.chevronRight()}
+  </div>
+  <div class="px-5 pt-3.5 bg-[#fafaf7] flex-1">
+    <textarea id="noteTextarea" class="note-input border-none outline-none resize-none bg-transparent w-full text-[17px] leading-[1.55] text-navy p-0" placeholder="What happened?" rows="4"></textarea>
+  </div>
+  <div class="pl-5 flex gap-2 overflow-x-auto bg-[#fafaf7] flex-none">
+    ${s.attachments.map((_, i) => `
+      <span class="relative flex-none w-[78px] h-[78px] rounded-xl bg-[#cfd6cf] border border-[#ebe9e3] flex items-center justify-center">
+        ${icon.documentStroke('#8a9a8a', 24)}
+        <span class="absolute -top-1.5 -right-1.5 w-[22px] h-[22px] rounded-full bg-navy text-white flex items-center justify-center font-bold text-[13px] cursor-pointer active:opacity-70" data-action="removeAttachment" data-arg="${i}">×</span>
+      </span>`).join('')}
+    <span class="flex-none w-[78px] h-[78px] rounded-xl border-[1.5px] border-dashed border-[#d9d6ce] flex flex-col items-center justify-center gap-1.5 mr-5 cursor-pointer active:opacity-70" data-action="openAttachSheet">
+      ${icon.plus()}<span class="font-bold text-xs text-ink">Add</span>
+    </span>
+  </div>
+  <div class="px-5 pt-2.5 text-[13px] text-ink bg-[#fafaf7] flex-none">${s.attachments.length} of 20 attachments</div>
+  <div class="flex items-center gap-3 px-5 py-2.5 border-t border-[#ebe9e3] flex-none cursor-pointer" data-action="toggleAttention">
+    <span class="w-6 h-6 rounded-[5px] flex items-center justify-center flex-none border" style="background:${s.requiresAttention ? '#ff5c00' : '#fff'};border-color:${s.requiresAttention ? '#ff5c00' : '#d9d6ce'}">${s.requiresAttention ? icon.check() : ''}</span>
+    <span class="flex-1 text-[15.5px] text-navy">Notify supervisor now</span>
+  </div>
+  <div class="flex gap-2.5 px-4 py-2.5 border-t border-[#ebe9e3] bg-white flex-none">
+    <span class="flex-1 h-11 rounded-lg flex items-center justify-center font-bold text-[16px] border border-[#d9d6ce] bg-white text-navy cursor-pointer active:opacity-70" data-action="cancelNote">Cancel</span>
+    <span class="flex-1 h-11 rounded-lg flex items-center justify-center font-bold text-[16px] text-white cursor-pointer active:opacity-70" style="background:${canSubmit ? '#ff5c00' : '#c9c4bb'}" data-action="submitReport">Save</span>
+  </div>
+  ${showKeyboard ? `
+  <div class="bg-[#d5d1c9] pt-2.5 px-1.5 flex-none">
+    <div class="flex gap-1.5 mb-2.5">${KEY_ROW_1.map((k) => key(k)).join('')}</div>
+    <div class="flex gap-1.5 mb-2.5 px-[18px]">${KEY_ROW_2.map((k) => key(k)).join('')}</div>
+    <div class="flex gap-1.5 mb-2.5">${key('⇧', 1.4)}${KEY_ROW_3.map((k) => key(k)).join('')}${key('⌫', 1.4)}</div>
+    <div class="flex gap-1.5 mb-2.5">
+      ${key('123', 1.6)}
+      <span class="flex-[5] bg-white rounded-[5px] h-[38px] flex items-center justify-center text-[17px] text-navy shadow-[0_1px_0_rgba(0,0,0,.25)]">space</span>
+      <span class="flex-[2] bg-[#b7b2a9] rounded-[5px] h-[38px] flex items-center justify-center text-[15px] text-navy shadow-[0_1px_0_rgba(0,0,0,.25)] cursor-pointer active:opacity-70" data-action="hideKeyboard">return</span>
+    </div>
+    <div class="flex items-center justify-between px-1.5 pb-0.5 mb-1.5">
+      <span class="w-[34px] h-[30px] flex items-center justify-center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4a4842" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg></span>
+      <span class="w-[34px] h-[30px] rounded-md flex items-center justify-center cursor-pointer" data-action="dictate">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="${s.dictating ? '#ff5c00' : '#4a4842'}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg>
+      </span>
+    </div>
+    <div class="h-[22px] flex items-center justify-center"><span class="w-[132px] h-[5px] rounded-[3px] bg-navy"></span></div>
+  </div>` : ''}
+  ${s.attachSheetOpen ? `
+  <div class="absolute inset-0 bg-[rgba(120,118,112,.45)] flex flex-col justify-end px-2 pb-6">
+    <div class="bg-[rgba(255,255,255,.96)] rounded-2xl overflow-hidden">
+      <span class="flex items-center gap-4 px-5 py-[15px] border-b border-[rgba(60,60,67,.14)] text-[19px] text-[#007aff] cursor-pointer active:opacity-70" data-action="pickAttachment">
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="flex-none"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4z"/><circle cx="12" cy="13" r="3.5"/></svg>Take Photo
+      </span>
+      <span class="flex items-center gap-4 px-5 py-[15px] border-b border-[rgba(60,60,67,.14)] text-[19px] text-[#007aff] cursor-pointer active:opacity-70" data-action="pickAttachment">
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="flex-none"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 11 6-4v10l-6-4z"/></svg>Record Video
+      </span>
+      <span class="flex items-center gap-4 px-5 py-[15px] text-[19px] text-[#007aff] cursor-pointer active:opacity-70" data-action="pickAttachment">
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="flex-none"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m3 16 5-4 4 3 3-2 6 5"/></svg>Choose Photo or Video
+      </span>
+    </div>
+    <div class="bg-[rgba(255,255,255,.96)] rounded-2xl mt-2 py-[15px] px-5 text-center font-bold text-[19px] text-[#007aff] cursor-pointer active:opacity-70" data-action="closeAttachSheet">Cancel</div>
+  </div>` : ''}`;
+}
+
+function fieldRow(iconHtml, label, badge, value, note) {
+  return `<div class="flex gap-3.5 py-3.5 border-b border-[#ebe9e3]">
+    <span class="flex-none w-[22px] flex justify-center pt-0.5">${iconHtml}</span>
+    <span class="flex-1 min-w-0">
+      <span class="flex items-center gap-2"><span class="flex-1 font-bold text-[15px] text-navy">${label}</span><span class="text-[11.5px] text-ink bg-[#efece5] rounded-full px-2.5 py-0.5 flex-none">${badge}</span></span>
+      <span class="block text-[15px] text-navy mt-1">${value}</span>
+      <span class="block text-[12.5px] text-muted mt-0.5">${note}</span>
+    </span>
+  </div>`;
+}
+
+function renderDetails() {
+  const s = state;
+  const ctx = contextParts();
+  const checkpointOptions = CHECKPOINTS.map((name) => ({ name, selected: name === (s.pendingCheckpoint || 'Front Door') }));
+
+  return `
+  ${statusBar('4:12', '#1c3d59', '#fafaf7')}
+  <div class="h-[52px] flex-none flex items-center gap-3.5 px-5 border-b border-[#ebe9e3] relative">
+    <span class="cursor-pointer active:opacity-70" data-action="cancelDetails">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1c3d59" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </span>
+    <span class="absolute inset-0 flex items-center justify-center font-bold text-[17px] text-navy pointer-events-none">Incident details</span>
+    <span class="flex-1"></span><span class="w-[22px] flex-none"></span>
+  </div>
+  <div class="flex-1 overflow-auto px-5 bg-[#fafaf7]">
+    ${fieldRow(
+      `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>`,
+      'Site', 'Auto-captured', 'Police Museum', 'Cannot be changed')}
+    ${fieldRow(
+      `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>`,
+      'Shift', 'Auto-captured', 'Day Shift · 7:00 AM – 3:00 PM', 'Cannot be changed')}
+    ${fieldRow(
+      `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/><path d="M8 6h6a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8h6"/></svg>`,
+      'Tour', 'Auto-captured', ctx.tour, 'Cannot be changed')}
+
+    <div class="flex gap-3.5 py-3.5 border-b border-[#ebe9e3]">
+      <span class="flex-none w-[22px] flex justify-center pt-0.5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+      <span class="flex-1 min-w-0">
+        <span class="block font-bold text-[15px] text-navy">Checkpoint</span>
+        <span class="relative block">
+          <span class="flex items-center gap-2 mt-1.5 border rounded-[10px] bg-white px-3 py-2.5 cursor-pointer" style="border-color:${s.checkpointListOpen ? '#ff5c00' : '#d9d6ce'}" data-action="toggleCheckpointList">
+            <span class="flex-1 text-[15px] text-navy">${s.pendingCheckpoint || 'Front Door'}</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4a4842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-none" style="transform:${s.checkpointListOpen ? 'rotate(180deg)' : 'none'}"><path d="m6 9 6 6 6-6"/></svg>
+          </span>
+          ${s.checkpointListOpen ? `
+          <span class="absolute left-0 right-0 top-full mt-1.5 z-[5] border border-[#d9d6ce] rounded-[10px] bg-white overflow-hidden shadow-[0_12px_24px_-8px_rgba(17,17,17,.28)] block">
+            ${checkpointOptions.map((opt, i) => `
+              <span class="flex items-center gap-2.5 px-3 py-[11px] cursor-pointer" style="border-bottom:${i === checkpointOptions.length - 1 ? 'none' : '1px solid #ebe9e3'};background:${opt.selected ? '#fff7f2' : '#fff'}" data-action="pickCheckpoint" data-arg="${opt.name}">
+                <span class="flex-1 text-[15px] text-navy">${opt.name}</span>${opt.selected ? icon.check('#ff5c00', 16, 2.6) : ''}
+              </span>`).join('')}
+          </span>` : ''}
+        </span>
+        <span class="block text-[12.5px] text-muted mt-1.5">Originally captured: ${s.reportFrom === 'checkpoint' ? 'Front Door' : 'None set'}</span>
+      </span>
+    </div>
+
+    <div class="flex gap-3.5 py-3.5 border-b border-[#ebe9e3]">
+      <span class="flex-none w-[22px] flex justify-center pt-0.5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+      <span class="flex-1 min-w-0">
+        <span class="block font-bold text-[15px] text-navy">Incident time</span>
+        <span class="flex items-center gap-2 mt-1.5 border border-[#d9d6ce] rounded-[10px] bg-white px-3 py-2.5 cursor-pointer" data-action="openTimePicker">
+          <span class="flex-1 text-[15px] text-navy">${s.pendingTime || 'Today, 4:12 PM'}</span>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4a4842" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="flex-none"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+        </span>
+        <span class="block text-[12.5px] text-muted mt-1.5">Originally captured: Today, 4:12 PM</span>
+      </span>
+    </div>
+
+    <div class="flex gap-3.5 py-3.5 border-b border-[#ebe9e3]">
+      <span class="flex-none w-[22px] flex justify-center pt-0.5">${icon.location()}</span>
+      <span class="flex-1 min-w-0">
+        <span class="flex items-center gap-2"><span class="flex-1 font-bold text-[15px] text-navy">Incident location</span><span class="text-[11.5px] text-ink bg-[#efece5] rounded-full px-2.5 py-0.5 flex-none">Auto-captured</span></span>
+        <span class="block text-[15px] text-navy mt-1">49.2827° N, 123.1207° W</span>
+        <span class="block text-[12.5px] text-muted mt-0.5">Device location when the report was started · cannot be changed</span>
+      </span>
+    </div>
+  </div>
+  <div class="flex gap-2.5 px-4 py-2.5 border-t border-[#ebe9e3] bg-white flex-none">
+    <span class="flex-1 h-11 rounded-lg flex items-center justify-center font-bold text-[16px] border border-[#d9d6ce] bg-white text-navy cursor-pointer active:opacity-70" data-action="cancelDetails">Cancel</span>
+    <span class="flex-1 h-11 rounded-lg flex items-center justify-center font-bold text-[16px] bg-brand text-white cursor-pointer active:opacity-70" data-action="saveDetails">Save</span>
+  </div>
+  ${s.timePickerOpen ? renderTimePicker() : ''}`;
+}
+
+function wheelColumn(flex, items, col) {
+  return `<div class="wheel-col box-border h-[216px] overflow-y-auto no-scrollbar wheel-mask" style="flex:${flex};scroll-snap-type:y mandatory;padding:90px 0" data-col="${col}">
+    ${items.map((it) => `<div class="h-9 flex items-center justify-center text-[20px] text-[#1c1e22] whitespace-nowrap cursor-pointer" style="scroll-snap-align:center" data-action="wheelTap" data-col="${col}" data-idx="${it.idx}">${it.label}</div>`).join('')}
+  </div>`;
+}
+
+function renderTimePicker() {
+  const dayOptions = DAYS.map((n, i) => ({ idx: i, label: n }));
+  const hourOptions = Array.from({ length: 12 }, (_, i) => ({ idx: i, label: String(i + 1) }));
+  const minOptions = Array.from({ length: 60 }, (_, i) => ({ idx: i, label: String(i).padStart(2, '0') }));
+  const merOptions = [{ idx: 0, label: 'AM' }, { idx: 1, label: 'PM' }];
+
+  return `
+  <div class="absolute inset-0 z-20 flex flex-col justify-end bg-[rgba(28,30,34,.32)]">
+    <div class="flex-1 cursor-pointer" data-action="closeTimePicker"></div>
+    <div class="bg-[#f6f5f3] rounded-t-2xl flex-none">
+      <div class="flex items-center justify-between px-4 py-[11px] border-b border-[#dcdad5]">
+        <span class="text-[17px] text-[#007aff] cursor-pointer active:opacity-70" data-action="closeTimePicker">Cancel</span>
+        <span class="font-bold text-[15px] text-navy">Incident time</span>
+        <span class="font-bold text-[17px] text-[#007aff] cursor-pointer active:opacity-70" data-action="doneTimePicker">Done</span>
+      </div>
+      <div class="relative px-2.5 pt-1.5 pb-3.5">
+        <div class="absolute left-3 right-3 top-24 h-9 rounded-[9px] bg-[rgba(120,120,128,.13)] pointer-events-none"></div>
+        <div class="flex">
+          ${wheelColumn(1.9, dayOptions, 'day')}
+          ${wheelColumn(0.72, hourOptions, 'hour')}
+          ${wheelColumn(0.72, minOptions, 'min')}
+          ${wheelColumn(0.9, merOptions, 'mer')}
+        </div>
+      </div>
+      <div class="h-5 flex items-center justify-center"><span class="w-[132px] h-[5px] rounded-[3px] bg-navy"></span></div>
+    </div>
+  </div>`;
+}
+
+function renderReports() {
+  const s = state;
+  const report = s.report;
+  const attachmentCount = report ? report.attachments.length : 0;
+  const followUpCount = report ? report.followUps.length : 0;
+  const preview = (report ? report.text : 'Tree came down across the north parking spaces, blocking three bays and the fire lane.').slice(0, 90) + '…';
+
+  return `
+  ${statusBar('4:12', '#1c3d59', '#fafaf7')}
+  ${headerRow('Reports', 'backFromReports', reportFlagButton('reports', false))}
+  <div class="bg-[#fafaf7] flex-1 overflow-auto">
+    <div class="px-5 pt-4 pb-2 font-bold text-[13px] tracking-[.06em] uppercase text-ink">Today · Police Museum</div>
+    <div class="px-5 flex flex-col gap-3">
+      ${report ? `
+      <div class="bg-white border border-[#ebe9e3] rounded-2xl p-[15px] cursor-pointer active:opacity-70" style="border-left:3px solid #ff5c00" data-action="openQueuedDetail">
+        <div class="flex items-center justify-between">
+          <span class="flex gap-1.5 flex-wrap">
+            ${report.requiresAttention ? `<span class="inline-flex items-center gap-1.5 font-bold text-xs tracking-[.05em] uppercase text-white bg-danger rounded-full px-2.5 py-1">${icon.warning()}Immediate</span>` : ''}
+            <span class="font-bold text-xs tracking-[.05em] uppercase text-[#c2410c] bg-[#ffeee0] rounded-full px-2.5 py-1">Queued · offline</span>
+          </span>
+          <span class="text-[13.5px] text-ink">4:12 PM</span>
+        </div>
+        <div class="text-[15.5px] leading-[1.45] text-navy mt-2.5">${preview}</div>
+        <div class="text-[13px] text-ink mt-2">Front Door · Opening Check · ${attachmentCount} attachments${followUpCount > 0 ? ` · ${followUpCount} follow-ups` : ''}</div>
+      </div>` : ''}
+      <div class="bg-white border border-[#ebe9e3] rounded-2xl p-[15px] opacity-60">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-xs tracking-[.05em] uppercase text-[#0b3e5c] bg-[rgba(0,188,212,.14)] border border-[rgba(0,188,212,.28)] rounded-full px-2.5 py-0.5">Access Control</span>
+          <span class="text-[13.5px] text-ink">5:48 PM</span>
+        </div>
+        <div class="text-[15.5px] leading-[1.45] text-navy mt-2.5">Loading bay door was propped open with a crate, no staff nearby…</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderReportDetail() {
+  const s = state;
+  const isSynced = s.screen === 'reportSynced';
+  const report = s.report || { text: '', requiresAttention: false, attachments: [], followUps: [] };
+  const hasFollowUps = report.followUps.length > 0;
+  const originalNoteLabel = hasFollowUps ? 'Original note' : 'Your note';
+  const reportText = report.text || 'Tree came down across the north parking spaces, blocking three bays and the fire lane. Branches are on a parked car.';
+  const showSubmitBanner = s.justSubmitted && !s.bannerDismissed && !isSynced;
+  const footerText = isSynced ? 'Synced 4:19 PM · visible to your supervisor' : 'Waiting for a connection · saved on this device';
+
+  const notifiedBanner = `<div class="flex items-center gap-2.5 mt-2.5 bg-[#fdecea] border border-[#f3c9c4] rounded-[10px] px-3 py-2">${icon.check('#b91c1c', 16, 2.6)}<span class="font-bold text-[13.5px] text-[#8c1d16]">Supervisor notified</span></div>`;
+
+  return `
+  ${statusBar('4:19', '#1c3d59', '#fafaf7')}
+  ${headerRow('Incident report', 'backFromDetail')}
+  <div class="bg-[#fafaf7] flex-1 overflow-auto">
+    ${showSubmitBanner ? `
+    <div class="mx-5 mt-3 bg-[#f5fafc] border border-[#cfe6f0] rounded-2xl px-3.5 py-2.5 flex gap-2.5 items-center">
+      <span class="flex-none w-[22px] h-[22px] rounded-full bg-[#00bcd4] flex items-center justify-center mt-px">${icon.check('#fff', 13, 3.2)}</span>
+      <span class="flex-1 font-bold text-[14.5px] text-[#0b3e5c]">Report saved</span>
+      <span class="flex-none w-6 h-6 flex items-center justify-center cursor-pointer active:opacity-70" data-action="dismissBanner">${icon.x()}</span>
+    </div>` : ''}
+
+    ${isSynced ? `
+    <div class="px-5 pt-4">
+      <div class="font-bold text-[22px] leading-[1.25] text-navy tracking-[-.015em]">Fallen tree blocking north parking</div>
+      <div class="flex gap-1.5 mt-3">
+        <span class="font-bold text-xs tracking-[.05em] uppercase text-[#0b3e5c] bg-[rgba(0,188,212,.14)] border border-[rgba(0,188,212,.28)] rounded-full px-2.5 py-1">Safety Hazard</span>
+        <span class="font-bold text-xs tracking-[.05em] uppercase text-white bg-danger rounded-full px-2.5 py-[5px]">High priority</span>
+      </div>
+      ${report.requiresAttention ? notifiedBanner : ''}
+      <div class="text-[13.5px] leading-[1.6] text-ink mt-2">A. Quijada · Police Museum · Opening Check · Front Door<br>Mar 24, 2026 · 4:12 PM</div>
+    </div>` : `
+    <div class="px-5 pt-4">
+      <div class="flex flex-col gap-2 max-w-[250px]"><span class="h-[15px] rounded-[6px] bg-[#ebe9e3] w-full"></span><span class="h-[15px] rounded-[6px] bg-[#ebe9e3] w-[70%]"></span></div>
+      <div class="flex gap-1.5 mt-3"><span class="font-bold text-xs tracking-[.05em] uppercase text-ink bg-[#efece5] rounded-full px-2.5 py-1 flex items-center gap-1.5">${icon.processing('#8a857c', 11)}Processing</span></div>
+      ${report.requiresAttention ? notifiedBanner : ''}
+      <div class="text-[13.5px] leading-[1.6] text-ink mt-3">A. Quijada · Police Museum · Opening Check · Front Door<br>Mar 24, 2026 · 4:12 PM</div>
+    </div>`}
+
+    <div class="mx-5 mt-2.5 bg-white border border-[#ebe9e3] rounded-2xl px-[15px] py-2.5">
+      <div class="flex items-center gap-2"><span class="font-bold text-[13px] tracking-[.05em] uppercase text-ink">${originalNoteLabel}</span><span class="text-[12.5px] text-ink ml-auto">Locked</span></div>
+      <div class="text-[15.5px] leading-[1.55] text-[#3d4b56] mt-2.5">${reportText}</div>
+    </div>
+
+    ${hasFollowUps ? `
+    <div class="flex items-center gap-2.5 px-5 pt-1.5 mt-1">
+      <span class="font-bold text-[13px] tracking-[.06em] uppercase text-ink">Follow-ups</span>
+      <span class="min-w-[22px] h-[22px] rounded-full bg-brand flex items-center justify-center font-bold text-xs text-white px-1.5">${report.followUps.length}</span>
+    </div>
+    <div class="px-5 pt-2 flex flex-col gap-2">
+      ${report.followUps.map((fu, i) => `
+        <div class="bg-white border border-[#ebe9e3] rounded-2xl px-[15px] py-2.5" style="border-left:3px solid #ff5c00">
+          <div class="flex items-center justify-between"><span class="font-bold text-[13px] tracking-[.05em] uppercase text-ink">Follow-up ${i + 1}</span><span class="text-[13px] text-ink">${fu.time}</span></div>
+          <div class="text-[15px] leading-[1.5] text-[#3d4b56] mt-2">${fu.text}</div>
+          ${fu.attachments.length > 0 ? `<div class="flex gap-2 mt-2">${fu.attachments.map(() => `<span class="w-[52px] h-[52px] rounded-xl bg-[#cfd6cf] flex-none"></span>`).join('')}</div>` : ''}
+        </div>`).join('')}
+    </div>` : ''}
+
+    ${isSynced ? `
+    <div class="mx-5 mt-2.5 bg-white border border-[#cfe6f0] rounded-2xl px-[15px] py-2.5">
+      <div class="flex items-center gap-2">${icon.sparkle()}<span class="font-bold text-[13px] tracking-[.05em] uppercase text-accent">Enhanced report</span></div>
+      <div class="text-[15.5px] leading-[1.55] text-navy mt-2.5">A tree has fallen across the north parking area at Police Museum, obstructing three parking bays and the designated fire lane. Branches are resting on a parked vehicle. Prompt clearance required.</div>
+    </div>` : `
+    <div class="mx-5 mt-3 bg-[#f5fafc] border border-[#cfe6f0] rounded-2xl px-[15px] py-3">
+      <div class="flex items-center gap-2">${icon.sparkle()}<span class="font-bold text-[13px] tracking-[.05em] uppercase text-accent">Enhanced report</span></div>
+      <div class="flex flex-col gap-2 mt-3.5"><span class="h-[11px] rounded-[6px] bg-[#dcebf3] w-full"></span><span class="h-[11px] rounded-[6px] bg-[#dcebf3] w-[92%]"></span><span class="h-[11px] rounded-[6px] bg-[#dcebf3] w-[64%]"></span></div>
+      <div class="text-[13.5px] leading-[1.5] text-accent mt-3.5" style="text-wrap:pretty">Appears here as soon as a signal comes back.</div>
+    </div>
+    <div class="mx-5 mt-3.5 w-fit font-bold text-[11px] tracking-[.03em] text-[#8a4410] bg-[#ffeee0] border border-dashed border-[#ff9d5c] rounded-full px-3 py-1.5 cursor-pointer active:opacity-70" data-action="simulateSync">Simulate sync completing →</div>`}
+  </div>
+  <div class="border-t border-[#ebe9e3] flex-none bg-[#fafaf7]">
+    <div class="flex items-center gap-2 px-5 pt-2.5"><span class="text-[13.5px] text-ink">${footerText}</span></div>
+    <div class="flex gap-2.5 px-5 pt-2.5 pb-4">
+      <span class="flex-1 flex h-12 border border-[#d9d6ce] rounded-xl bg-white items-center justify-center gap-2 font-bold text-[16px] text-navy cursor-pointer active:opacity-70" data-action="openFollowUp">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1c3d59" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Add follow-up
+      </span>
+      ${s.justSubmitted ? `<span class="flex-1 flex h-12 rounded-xl bg-brand items-center justify-center font-bold text-[16px] text-white cursor-pointer active:opacity-70" data-action="doneSubmitted">Done</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function drawerRow(bg, border, iconBg, iconHtml, title, titleColor, subtitle, subtitleColor, action, disabled) {
+  return `<div class="rounded-2xl px-[15px] py-[15px] flex items-center gap-3.5 border ${disabled ? 'opacity-50' : 'cursor-pointer active:opacity-70'}" style="background:${bg};border-color:${border}" ${action ? `data-action="${action}"` : ''}>
+    <span class="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center flex-none" style="background:${iconBg}">${iconHtml}</span>
+    <span class="flex-1"><span class="block font-bold text-[15.5px]" style="color:${titleColor}">${title}</span><span class="block text-[13px] mt-px" style="color:${subtitleColor}">${subtitle}</span></span>
+  </div>`;
+}
+
+function renderDrawer() {
+  const ctx = contextParts();
+  return `
+  ${statusBar('4:12', '#1c3d59', '#fafaf7')}
+  <div class="relative flex-1 overflow-hidden">
+    <div class="absolute inset-0 bg-[rgba(28,61,89,.35)] cursor-pointer" data-action="closeDrawer"></div>
+    <div class="absolute left-0 right-0 bottom-0 bg-[#fafaf7] rounded-t-[22px] px-5 pt-3.5 pb-6">
+      <div class="w-[38px] h-1 rounded mx-auto mb-4 bg-[#d9d6ce]"></div>
+      <div class="font-bold text-[19px] text-navy">Start an action</div>
+      <div class="text-[13.5px] text-ink mt-1">${ctx.line1}</div>
+      <div class="flex flex-col gap-2.5 mt-4">
+        ${drawerRow('#b91c1c', '#9a1414', 'rgba(255,255,255,.18)', icon.warning('#fff', 19), 'Emergency', '#fff', 'Hold three seconds to send an alert', 'rgba(255,255,255,.85)', 'drawerEmergency')}
+        ${drawerRow('#fff', '#ebe9e3', '#ffeee0', icon.clipboard('#ff5c00', 19), 'Incident report', '#1c3d59', 'Note, photos and video', '#4a4842', 'drawerIncidentReport')}
+        ${drawerRow('#fff', '#ebe9e3', '#efece5', icon.documentStroke('#8a857c', 19), 'Other reports', '#1c3d59', 'Vehicle, maintenance and site forms', '#4a4842', null, true)}
+        ${drawerRow('#fff', '#ebe9e3', '#efece5', `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8a857c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17V7a2 2 0 0 1 2-2h7l3 3h4a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m10 14 4-4-4-4"/></svg>`, 'Shift pass-down', '#1c3d59', 'Hand over between shifts', '#4a4842', null, true)}
+        ${drawerRow('#fff', '#ebe9e3', '#efece5', icon.processing('#8a857c', 19), 'Report history', '#1c3d59', 'Reports you have filed', '#4a4842', null, true)}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEmergency() {
+  const s = state;
+  const done = s.emergencyCount <= 0;
+  const dashOffset = 215 + (3 - Math.max(s.emergencyCount, 0)) * 130;
+  const ctx = contextParts();
+
+  return `
+  ${statusBar('4:12', '#fff')}
+  <div class="px-[30px] pt-14 text-center">
+    <div class="font-bold text-[13px] tracking-[.1em] uppercase text-[rgba(255,255,255,.7)]">Emergency alert</div>
+    <div class="font-bold text-[28px] leading-[1.25] text-white mt-3 tracking-[-.02em]">${done ? 'Alert sent to your supervisor' : 'Keep holding to alert your supervisor'}</div>
+  </div>
+  <div class="flex items-center justify-center mt-14">
+    <div class="relative w-[210px] h-[210px] rounded-full bg-danger flex items-center justify-center" style="box-shadow:0 0 0 18px rgba(255,255,255,.1), 0 0 0 36px rgba(255,255,255,.06)">
+      <svg width="210" height="210" viewBox="0 0 210 210" class="absolute inset-0" style="transform:rotate(-90deg)">
+        <circle cx="105" cy="105" r="98" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="8"/>
+        <circle cx="105" cy="105" r="98" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-dasharray="616" stroke-dashoffset="${dashOffset}" style="transition:stroke-dashoffset .9s linear"/>
+      </svg>
+      ${done
+        ? `<svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`
+        : `<span class="font-bold text-[64px] text-white tracking-[-.03em]">${s.emergencyCount}</span>`}
+    </div>
+  </div>
+  <div class="text-center mt-10 text-[16px] leading-[1.6] text-[rgba(255,255,255,.82)] px-[34px]" style="text-wrap:pretty">${ctx.line1}<br>Your location and shift are attached.</div>
+  ${!done ? `
+  <div class="mt-auto px-7 pb-[34px] text-center">
+    <span class="inline-flex items-center justify-center h-[52px] px-[34px] rounded-xl border border-[rgba(255,255,255,.45)] font-bold text-[16px] text-white cursor-pointer active:opacity-70" data-action="releaseEmergency">Release to cancel</span>
+  </div>` : ''}`;
+}
+
+/* ---------- top-level render + wiring ---------- */
+
+function renderScreen() {
+  switch (state.screen) {
+    case 'shift': return renderShift();
+    case 'tour': return renderTour();
+    case 'checkpoint': return renderCheckpoint();
+    case 'note': return renderNote();
+    case 'details': return renderDetails();
+    case 'reports': return renderReports();
+    case 'reportProcessing':
+    case 'reportSynced': return renderReportDetail();
+    case 'drawer': return renderDrawer();
+    default: return '';
+  }
+}
+
+function render() {
+  const root = document.getElementById('screen');
+  root.style.background = state.emergencyActive ? '#7f1010' : '#fafaf7';
+  root.innerHTML = state.emergencyActive ? renderEmergency() : renderScreen();
+  wireTextarea(root);
+  if (state.timePickerOpen) wireWheels(root);
+}
+
+function wireTextarea(root) {
+  const ta = root.querySelector('#noteTextarea');
+  if (!ta) return;
+  ta.value = state.noteText;
+  ta.addEventListener('input', (e) => actions.onNoteInput(e.target.value));
+  ta.addEventListener('focus', () => actions.showKeyboard());
+}
+
+function wireWheels(root) {
+  const cols = root.querySelectorAll('.wheel-col');
+  cols.forEach((el) => {
+    const col = el.getAttribute('data-col');
+    wheelEls[col] = el;
+    const idx = state[colKey[col]] || 0;
+    const apply = () => { el.scrollTop = idx * 36; };
+    apply();
+    requestAnimationFrame(apply);
+    setTimeout(apply, 60);
+    el.addEventListener('scroll', () => actions.wheelScroll(col, el));
+  });
+}
+
+function dispatch(action, el, e) {
+  switch (action) {
+    case 'removeAttachment':
+      actions.removeAttachment(Number(el.getAttribute('data-arg')));
+      break;
+    case 'pickCheckpoint':
+      actions.pickCheckpoint(el.getAttribute('data-arg'));
+      break;
+    case 'wheelTap':
+      actions.wheelTap(el.getAttribute('data-col'), Number(el.getAttribute('data-idx')));
+      break;
+    case 'drawerEmergency':
+      actions.drawerEmergency(e);
+      break;
+    case 'drawerIncidentReport':
+      actions.drawerIncidentReport(e);
+      break;
+    default:
+      if (typeof actions[action] === 'function') actions[action]();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const root = document.getElementById('screen');
+
+  root.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    dispatch(el.getAttribute('data-action'), el, e);
+  });
+
+  root.addEventListener('mousedown', (e) => {
+    const el = e.target.closest('[data-pressstart]');
+    if (el) actions.startFlagPress(el.getAttribute('data-pressstart'));
+  });
+  root.addEventListener('mouseup', (e) => {
+    const el = e.target.closest('[data-pressend]');
+    if (el) actions.endFlagPress();
+  });
+  root.addEventListener('mouseleave', (e) => {
+    if (e.target.closest('[data-pressend]')) actions.endFlagPress();
+  }, true);
+  root.addEventListener('touchstart', (e) => {
+    const el = e.target.closest('[data-pressstart]');
+    if (el) actions.startFlagPress(el.getAttribute('data-pressstart'));
+  });
+  root.addEventListener('touchend', (e) => {
+    const el = e.target.closest('[data-pressend]');
+    if (el) actions.endFlagPress();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => actions.resetAll());
+
+  render();
+});
+
+</script>
+</body>
+</html>

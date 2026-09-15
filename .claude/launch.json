@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "prototype-react-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "prototype-react", "run", "dev"],
+      "port": 5173
+    }
+  ]
+}
