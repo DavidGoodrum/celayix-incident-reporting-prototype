@@ -167,14 +167,12 @@ export function ReportDetailScreen({ api }: { api: PrototypeApi }) {
             </svg>
             Add follow-up
           </span>
-          {state.justSubmitted && (
-            <span
-              className="flex-1 flex h-12 rounded-xl bg-brand items-center justify-center font-bold text-[16px] text-white cursor-pointer active:opacity-70"
-              onClick={actions.doneSubmitted}
-            >
-              Done
-            </span>
-          )}
+          <span
+            className="flex-1 flex h-12 rounded-xl bg-brand items-center justify-center font-bold text-[16px] text-white cursor-pointer active:opacity-70"
+            onClick={actions.doneSubmitted}
+          >
+            Done
+          </span>
         </div>
       </div>
     </>

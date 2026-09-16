@@ -42,9 +42,9 @@ export default function App() {
       <div className="font-bold text-[15px] text-navy mb-1">Team Xpress · Incident reporting — click-through prototype</div>
       <div className="text-[13px] text-navy/60 mb-5 text-center max-w-[460px]" style={{ textWrap: 'pretty' } as React.CSSProperties}>
         Follows the final settled flow: report from the app bar, inline attachments via the platform's own picker, editable incident
-        details, and follow-ups added to an already-filed report. Emergency's entry point is an open question in the current canvas — the
-        persistent alert bar has been removed, so it now lives behind a long-press on the flag icon (mirroring the new actions-drawer
-        concept) while a normal tap still goes straight to the note.
+        details, and follow-ups added to an already-filed report. The persistent alert bar is gone: a tap on the app-bar clipboard icon
+        opens the report actions drawer, where Emergency sits as a hold-to-send card. A long press on the same icon jumps straight to the
+        incident note.
       </div>
 
       <div className="w-[390px] p-[7px] bg-[#e3dfd7] rounded-[44px] shadow-[0_24px_48px_-12px_rgba(17,17,17,.2)] flex-none">

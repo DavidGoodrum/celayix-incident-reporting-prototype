@@ -73,10 +73,10 @@ export function usePrototypeState() {
       if (pressTimer.current) clearTimeout(pressTimer.current)
       pressTimer.current = setTimeout(() => {
         pressFired.current = true
-        openDrawer(from)
+        openReport(from)
       }, 480)
     },
-    [openDrawer],
+    [openReport],
   )
 
   const endFlagPress = useCallback(() => {
@@ -85,10 +85,10 @@ export function usePrototypeState() {
       pressTimer.current = null
     }
     if (!pressFired.current && pressFrom.current) {
-      openReport(pressFrom.current)
+      openDrawer(pressFrom.current)
     }
     pressFrom.current = null
-  }, [openReport])
+  }, [openDrawer])
 
   const closeDrawer = useCallback(
     () => setState((s) => ({ ...s, screen: s.preDrawerScreen || 'shift' })),
@@ -285,11 +285,22 @@ export function usePrototypeState() {
   }, [])
 
   const goToReports = useCallback(() => setState((s) => ({ ...s, prevScreen: s.screen, screen: 'reports' })), [])
-  const backFromReports = useCallback(() => patch({ screen: state.prevScreen || 'shift' }), [patch, state.prevScreen])
+  const backFromReports = useCallback(() => {
+    setState((s) => {
+      let back = s.prevScreen
+      if (!back || back === 'reports' || back === 'drawer') back = 'shift'
+      return { ...s, screen: back }
+    })
+  }, [])
   const openQueuedDetail = useCallback(() => patch({ screen: 'reportProcessing', justSubmitted: false }), [patch])
 
   const doneSubmitted = useCallback(() => {
     setState((s) => {
+      if (!s.justSubmitted) {
+        let back = s.prevScreen
+        if (!back || back === 'reports' || back === 'drawer') back = 'shift'
+        return { ...s, screen: back }
+      }
       const from = s.reportFrom
       return {
         ...s,
@@ -297,6 +308,14 @@ export function usePrototypeState() {
         bannerDismissed: false,
         screen: from === 'note' || from === 'reports' ? 'shift' : ((from as Screen) || 'shift'),
       }
+    })
+  }, [])
+
+  const drawerReportHistory = useCallback(() => {
+    setState((s) => {
+      let back = s.preDrawerScreen
+      if (!back || back === 'reports' || back === 'drawer') back = 'shift'
+      return { ...s, screen: 'reports', prevScreen: back }
     })
   }, [])
 
@@ -358,6 +377,7 @@ export function usePrototypeState() {
       closeDrawer,
       drawerEmergency,
       drawerIncidentReport,
+      drawerReportHistory,
       openReport,
       openFollowUp,
       onNoteInput,
