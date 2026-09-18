@@ -1,6 +1,6 @@
 # Incident Reporting Prototype — Standalone HTML
 
-A single self-contained `index.html` — Tailwind CSS via CDN, Google Fonts (Lato) via CDN, vanilla JavaScript for all state and navigation. No build step, no dependencies to install.
+A single self-contained `index.html` — Tailwind CSS via CDN, Google Fonts (Roboto) via CDN, vanilla JavaScript for all state and navigation. No build step, no dependencies to install.
 
 ## Run
 

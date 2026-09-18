@@ -47,17 +47,17 @@ export default function App() {
         incident note.
       </div>
 
-      <div className="w-[390px] p-[7px] bg-[#e3dfd7] rounded-[44px] shadow-[0_24px_48px_-12px_rgba(17,17,17,.2)] flex-none">
+      <div className="w-[390px] p-[7px] bg-[#d2d2d2] rounded-[44px] shadow-[0_24px_48px_-12px_rgba(17,17,17,.2)] flex-none">
         <div
           className="w-[376px] h-[812px] rounded-[38px] overflow-hidden flex flex-col relative"
-          style={{ background: state.emergencyActive ? '#7f1010' : '#fafaf7' }}
+          style={{ background: state.emergencyActive ? '#7f1010' : '#fcfbf8' }}
         >
           {state.emergencyActive ? <EmergencyScreen api={api} /> : <ActiveScreen api={api} />}
         </div>
       </div>
 
       <button
-        className="font-bold text-xs text-navy bg-white border border-[#d9d6ce] rounded-full px-4 py-[7px] mt-5 hover:border-brand hover:text-brand"
+        className="font-bold text-xs text-navy bg-white border border-[#a7a7a7] rounded-full px-4 py-[7px] mt-5 hover:border-brand hover:text-brand shadow-[0_0_4px_rgba(0,0,0,.3)]"
         onClick={actions.resetAll}
       >
         Reset prototype

@@ -4,7 +4,7 @@ export function HeaderRow({
   title,
   onBack,
   trailing,
-  bg = '#fafaf7',
+  bg = '#fcfbf8',
 }: {
   title: string
   onBack?: () => void
@@ -15,7 +15,7 @@ export function HeaderRow({
     <div className="h-[52px] flex-none flex items-center gap-2 px-5 relative" style={{ background: bg }}>
       {onBack ? (
         <span className="cursor-pointer active:opacity-70" onClick={onBack}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1c3d59" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5" />
             <path d="m12 19-7-7 7-7" />
           </svg>

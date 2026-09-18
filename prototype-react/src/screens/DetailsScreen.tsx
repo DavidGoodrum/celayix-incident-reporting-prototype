@@ -24,7 +24,7 @@ function WheelColumn({
       {items.map((item) => (
         <div
           key={item.idx}
-          className="h-9 flex items-center justify-center text-[20px] text-[#1c1e22] whitespace-nowrap cursor-pointer"
+          className="h-9 flex items-center justify-center text-[20px] text-[#000000] whitespace-nowrap cursor-pointer"
           style={{ scrollSnapAlign: 'center' }}
           onClick={() => api.actions.wheelTap(col, item.idx)}
         >
@@ -48,10 +48,10 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
 
   return (
     <>
-      <StatusBar time="4:12" color="#1c3d59" bg="#fafaf7" />
-      <div className="h-[52px] flex-none flex items-center gap-3.5 px-5 border-b border-[#ebe9e3] relative">
+      <StatusBar time="4:12" color="#000000" bg="#fcfbf8" />
+      <div className="h-[52px] flex-none flex items-center gap-3.5 px-5 border-b border-[#e7e0d9] relative">
         <span className="cursor-pointer active:opacity-70" onClick={actions.cancelDetails}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1c3d59" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </span>
@@ -61,10 +61,10 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
         <span className="flex-1" />
         <span className="w-[22px] flex-none" />
       </div>
-      <div className="flex-1 overflow-auto px-5 bg-[#fafaf7]">
+      <div className="flex-1 overflow-auto px-5 bg-[#fcfbf8]">
         <FieldRow
           icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#676767" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 21h18M5 21V7l7-4 7 4v14" />
               <path d="M9 21v-6h6v6" />
             </svg>
@@ -76,7 +76,7 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
         />
         <FieldRow
           icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#676767" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="5" width="18" height="16" rx="2" />
               <path d="M16 3v4M8 3v4M3 11h18" />
             </svg>
@@ -88,7 +88,7 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
         />
         <FieldRow
           icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#676767" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
               <path d="M8 6h6a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8h6" />
             </svg>
@@ -99,9 +99,9 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
           note="Cannot be changed"
         />
 
-        <div className="flex gap-3.5 py-3.5 border-b border-[#ebe9e3]">
+        <div className="flex gap-3.5 py-3.5 border-b border-[#e7e0d9]">
           <span className="flex-none w-[22px] flex justify-center pt-0.5">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#676767" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
@@ -111,7 +111,7 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
             <span className="relative block">
               <span
                 className="flex items-center gap-2 mt-1.5 border rounded-[10px] bg-white px-3 py-2.5 cursor-pointer"
-                style={{ borderColor: state.checkpointListOpen ? '#ff5c00' : '#d9d6ce' }}
+                style={{ borderColor: state.checkpointListOpen ? '#e96c24' : '#a7a7a7' }}
                 onClick={actions.toggleCheckpointList}
               >
                 <span className="flex-1 text-[15px] text-navy">{state.pendingCheckpoint || 'Front Door'}</span>
@@ -120,7 +120,7 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
                   height="17"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#4a4842"
+                  stroke="#333333"
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -131,19 +131,19 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
                 </svg>
               </span>
               {state.checkpointListOpen && (
-                <span className="absolute left-0 right-0 top-full mt-1.5 z-[5] border border-[#d9d6ce] rounded-[10px] bg-white overflow-hidden shadow-[0_12px_24px_-8px_rgba(17,17,17,.28)] block">
+                <span className="absolute left-0 right-0 top-full mt-1.5 z-[5] border border-[#a7a7a7] rounded-[10px] bg-white overflow-hidden shadow-[0_12px_24px_-8px_rgba(17,17,17,.28)] block">
                   {checkpointOptions.map((opt, i) => (
                     <span
                       key={opt.name}
                       className="flex items-center gap-2.5 px-3 py-[11px] cursor-pointer"
                       style={{
-                        borderBottom: i === checkpointOptions.length - 1 ? 'none' : '1px solid #ebe9e3',
-                        background: opt.selected ? '#fff7f2' : '#fff',
+                        borderBottom: i === checkpointOptions.length - 1 ? 'none' : '1px solid #e7e0d9',
+                        background: opt.selected ? '#fef9f6' : '#fff',
                       }}
                       onClick={() => actions.pickCheckpoint(opt.name)}
                     >
                       <span className="flex-1 text-[15px] text-navy">{opt.name}</span>
-                      {opt.selected && <CheckIcon size={16} stroke="#ff5c00" strokeWidth={2.6} />}
+                      {opt.selected && <CheckIcon size={16} stroke="#e96c24" strokeWidth={2.6} />}
                     </span>
                   ))}
                 </span>
@@ -155,9 +155,9 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
           </span>
         </div>
 
-        <div className="flex gap-3.5 py-3.5 border-b border-[#ebe9e3]">
+        <div className="flex gap-3.5 py-3.5 border-b border-[#e7e0d9]">
           <span className="flex-none w-[22px] flex justify-center pt-0.5">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a857c" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#676767" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7v5l3 2" />
             </svg>
@@ -165,11 +165,11 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
           <span className="flex-1 min-w-0">
             <span className="block font-bold text-[15px] text-navy">Incident time</span>
             <span
-              className="flex items-center gap-2 mt-1.5 border border-[#d9d6ce] rounded-[10px] bg-white px-3 py-2.5 cursor-pointer"
+              className="flex items-center gap-2 mt-1.5 border border-[#a7a7a7] rounded-[10px] bg-white px-3 py-2.5 cursor-pointer"
               onClick={actions.openTimePicker}
             >
               <span className="flex-1 text-[15px] text-navy">{state.pendingTime || 'Today, 4:12 PM'}</span>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4a4842" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="flex-none">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="flex-none">
                 <rect x="3" y="5" width="18" height="16" rx="2" />
                 <path d="M16 3v4M8 3v4M3 11h18" />
               </svg>
@@ -178,29 +178,29 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
           </span>
         </div>
 
-        <div className="flex gap-3.5 py-3.5 border-b border-[#ebe9e3]">
+        <div className="flex gap-3.5 py-3.5 border-b border-[#e7e0d9]">
           <span className="flex-none w-[22px] flex justify-center pt-0.5">
             <LocationIcon />
           </span>
           <span className="flex-1 min-w-0">
             <span className="flex items-center gap-2">
               <span className="flex-1 font-bold text-[15px] text-navy">Incident location</span>
-              <span className="text-[11.5px] text-ink bg-[#efece5] rounded-full px-2.5 py-0.5 flex-none">Auto-captured</span>
+              <span className="text-[11.5px] text-ink bg-[#f3f3f3] rounded-full px-2.5 py-0.5 flex-none">Auto-captured</span>
             </span>
             <span className="block text-[15px] text-navy mt-1">49.2827° N, 123.1207° W</span>
             <span className="block text-[12.5px] text-muted mt-0.5">Device location when the report was started · cannot be changed</span>
           </span>
         </div>
       </div>
-      <div className="flex gap-2.5 px-4 py-2.5 border-t border-[#ebe9e3] bg-white flex-none">
+      <div className="flex gap-2.5 px-4 py-2.5 border-t border-[#e7e0d9] bg-white flex-none">
         <span
-          className="flex-1 h-11 rounded-lg flex items-center justify-center font-bold text-[16px] border border-[#d9d6ce] bg-white text-navy cursor-pointer active:opacity-70"
+          className="flex-1 h-11 rounded-lg flex items-center justify-center font-bold text-[16px] border border-[#a7a7a7] bg-white text-navy cursor-pointer active:opacity-70 shadow-[0_0_4px_rgba(0,0,0,.3)]"
           onClick={actions.cancelDetails}
         >
           Cancel
         </span>
         <span
-          className="flex-1 h-11 rounded-lg flex items-center justify-center font-bold text-[16px] bg-brand text-white cursor-pointer active:opacity-70"
+          className="flex-1 h-11 rounded-lg flex items-center justify-center font-bold text-[16px] bg-brand text-white cursor-pointer active:opacity-70 shadow-[0_0_4px_rgba(0,0,0,.3)]"
           onClick={actions.saveDetails}
         >
           Save
@@ -210,13 +210,13 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
       {state.timePickerOpen && (
         <div className="absolute inset-0 z-20 flex flex-col justify-end bg-[rgba(28,30,34,.32)]">
           <div className="flex-1 cursor-pointer" onClick={actions.closeTimePicker} />
-          <div className="bg-[#f6f5f3] rounded-t-2xl flex-none">
-            <div className="flex items-center justify-between px-4 py-[11px] border-b border-[#dcdad5]">
-              <span className="text-[17px] text-[#007aff] cursor-pointer active:opacity-70" onClick={actions.closeTimePicker}>
+          <div className="bg-[#f9f9f9] rounded-t-2xl flex-none">
+            <div className="flex items-center justify-between px-4 py-[11px] border-b border-[#e6e6e6]">
+              <span className="text-[17px] text-[#007eb5] cursor-pointer active:opacity-70" onClick={actions.closeTimePicker}>
                 Cancel
               </span>
               <span className="font-bold text-[15px] text-navy">Incident time</span>
-              <span className="font-bold text-[17px] text-[#007aff] cursor-pointer active:opacity-70" onClick={actions.doneTimePicker}>
+              <span className="font-bold text-[17px] text-[#007eb5] cursor-pointer active:opacity-70" onClick={actions.doneTimePicker}>
                 Done
               </span>
             </div>
@@ -253,12 +253,12 @@ function FieldRow({
   note: string
 }) {
   return (
-    <div className="flex gap-3.5 py-3.5 border-b border-[#ebe9e3]">
+    <div className="flex gap-3.5 py-3.5 border-b border-[#e7e0d9]">
       <span className="flex-none w-[22px] flex justify-center pt-0.5">{icon}</span>
       <span className="flex-1 min-w-0">
         <span className="flex items-center gap-2">
           <span className="flex-1 font-bold text-[15px] text-navy">{label}</span>
-          <span className="text-[11.5px] text-ink bg-[#efece5] rounded-full px-2.5 py-0.5 flex-none">{badge}</span>
+          <span className="text-[11.5px] text-ink bg-[#f3f3f3] rounded-full px-2.5 py-0.5 flex-none">{badge}</span>
         </span>
         <span className="block text-[15px] text-navy mt-1">{value}</span>
         <span className="block text-[12.5px] text-muted mt-0.5">{note}</span>

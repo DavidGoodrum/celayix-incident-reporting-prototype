@@ -1,6 +1,6 @@
 type IconProps = { size?: number; stroke?: string; className?: string }
 
-export function ChevronLeft({ size = 22, stroke = '#1c3d59', className }: IconProps) {
+export function ChevronLeft({ size = 22, stroke = '#000000', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M19 12H5" />
@@ -9,7 +9,7 @@ export function ChevronLeft({ size = 22, stroke = '#1c3d59', className }: IconPr
   )
 }
 
-export function ChevronRight({ size = 17, stroke = '#a8a29a', className }: IconProps) {
+export function ChevronRight({ size = 17, stroke = '#8f8f8f', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="m9 18 6-6-6-6" />
@@ -25,7 +25,7 @@ export function CheckIcon({ size = 15, stroke = '#fff', strokeWidth = 3, classNa
   )
 }
 
-export function PlusIcon({ size = 20, stroke = '#4a4842', className }: IconProps) {
+export function PlusIcon({ size = 20, stroke = '#333333', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" className={className}>
       <path d="M12 5v14M5 12h14" />
@@ -33,7 +33,7 @@ export function PlusIcon({ size = 20, stroke = '#4a4842', className }: IconProps
   )
 }
 
-export function ClipboardIcon({ size = 19, stroke = '#1c3d59', className }: IconProps) {
+export function ClipboardIcon({ size = 19, stroke = '#000000', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
@@ -43,7 +43,7 @@ export function ClipboardIcon({ size = 19, stroke = '#1c3d59', className }: Icon
   )
 }
 
-export function BellIcon({ size = 23, stroke = '#1c3d59', className }: IconProps) {
+export function BellIcon({ size = 23, stroke = '#000000', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" />
@@ -52,7 +52,7 @@ export function BellIcon({ size = 23, stroke = '#1c3d59', className }: IconProps
   )
 }
 
-export function LockIcon({ size = 15, stroke = '#8a857c', className }: IconProps) {
+export function LockIcon({ size = 15, stroke = '#676767', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={2} className={className}>
       <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -61,7 +61,7 @@ export function LockIcon({ size = 15, stroke = '#8a857c', className }: IconProps
   )
 }
 
-export function DocumentIcon({ size = 20, stroke = '#5b5651', fill, className }: IconProps & { fill?: string }) {
+export function DocumentIcon({ size = 20, stroke = '#676767', fill, className }: IconProps & { fill?: string }) {
   if (fill) {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} className={className}>
@@ -77,7 +77,7 @@ export function DocumentIcon({ size = 20, stroke = '#5b5651', fill, className }:
   )
 }
 
-export function SparkleIcon({ size = 15, stroke = '#105d86', className }: IconProps) {
+export function SparkleIcon({ size = 15, stroke = '#0173b4', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
@@ -86,7 +86,7 @@ export function SparkleIcon({ size = 15, stroke = '#105d86', className }: IconPr
   )
 }
 
-export function ProcessingIcon({ size = 15, stroke = '#8a857c', className }: IconProps) {
+export function ProcessingIcon({ size = 15, stroke = '#676767', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={2.4} strokeLinecap="round" className={className}>
       <path d="M12 7v5l3 2" />
@@ -104,7 +104,7 @@ export function WarningIcon({ size = 12, stroke = '#fff', className }: IconProps
   )
 }
 
-export function XIcon({ size = 14, stroke = '#8a857c', className }: IconProps) {
+export function XIcon({ size = 14, stroke = '#676767', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={2.4} strokeLinecap="round" className={className}>
       <path d="M18 6 6 18M6 6l12 12" />
@@ -112,7 +112,7 @@ export function XIcon({ size = 14, stroke = '#8a857c', className }: IconProps) {
   )
 }
 
-export function LocationIcon({ size = 18, stroke = '#8a857c', className }: IconProps) {
+export function LocationIcon({ size = 18, stroke = '#676767', className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <circle cx="12" cy="12" r="7" />
