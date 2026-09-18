@@ -53,7 +53,7 @@ export function EmergencyScreen({ api }: { api: PrototypeApi }) {
       {!done && (
         <div className="mt-auto px-7 pb-[34px] text-center">
           <span
-            className="inline-flex items-center justify-center h-[52px] px-[34px] rounded-xl border border-[rgba(255,255,255,.45)] font-bold text-[16px] text-white cursor-pointer active:opacity-70"
+            className="inline-flex items-center justify-center h-[52px] px-[34px] rounded-lg border border-[rgba(255,255,255,.45)] font-bold text-[16px] text-white cursor-pointer active:opacity-70"
             onClick={actions.releaseEmergency}
           >
             Release to cancel

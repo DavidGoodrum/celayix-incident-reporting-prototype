@@ -4,15 +4,15 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Lato', 'system-ui', 'sans-serif'],
+        sans: ['Roboto', 'system-ui', 'sans-serif'],
       },
       colors: {
-        navy: '#1c3d59',
-        ink: '#4a4842',
-        muted: '#8a857c',
-        brand: '#ff5c00',
-        danger: '#b91c1c',
-        accent: '#105d86',
+        navy: '#000000',
+        ink: '#333333',
+        muted: '#676767',
+        brand: '#e96c24',
+        danger: '#c62828',
+        accent: '#0173b4',
       },
     },
   },
