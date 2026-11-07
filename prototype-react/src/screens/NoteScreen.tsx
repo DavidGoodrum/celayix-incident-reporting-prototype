@@ -1,6 +1,7 @@
 import { StatusBar } from '../components/StatusBar'
 import { CheckIcon, PlusIcon } from '../components/Icons'
 import type { PrototypeApi } from '../state'
+import { samplePhoto } from '../types'
 
 const KEY_ROW_1 = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p']
 const KEY_ROW_2 = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l']
@@ -70,10 +71,11 @@ export function NoteScreen({ api }: { api: PrototypeApi }) {
             key={i}
             className="relative flex-none w-[78px] h-[78px] rounded-lg bg-[#eeeeee] border border-[#e7e0d9] flex items-center justify-center"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#676767" strokeWidth={1.6}>
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <path d="m3 16 5-4 4 3 3-2 6 5" />
-            </svg>
+            <img
+              src={samplePhoto(i).src}
+              alt={samplePhoto(i).alt}
+              className="absolute inset-0 w-full h-full object-cover rounded-lg block"
+            />
             <span
               className="absolute -top-1.5 -right-1.5 w-[22px] h-[22px] rounded-full bg-navy text-white flex items-center justify-center font-bold text-[13px] cursor-pointer active:opacity-70"
               onClick={() => actions.removeAttachment(i)}

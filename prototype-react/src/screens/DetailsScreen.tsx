@@ -1,6 +1,8 @@
+import { Fragment } from 'react'
 import { StatusBar } from '../components/StatusBar'
 import { CheckIcon, LocationIcon } from '../components/Icons'
 import type { PrototypeApi } from '../state'
+import { DEFAULT_CP } from '../types'
 
 function WheelColumn({
   flex,
@@ -37,10 +39,9 @@ function WheelColumn({
 
 export function DetailsScreen({ api }: { api: PrototypeApi }) {
   const { state, actions, ctx, days } = api
-  const checkpointOptions = api.checkpoints.map((name) => ({
-    name,
-    selected: name === (state.pendingCheckpoint || 'Front Door'),
-  }))
+  const pcp = state.pendingCheckpoint || (state.reportFrom === 'checkpoint' ? DEFAULT_CP : 'none')
+  const pendingName = pcp === 'none' ? 'No checkpoint' : pcp.split('|')[1]
+  const pendingArea = pcp === 'none' ? '' : pcp.split('|')[0]
   const hourOptions = Array.from({ length: 12 }, (_, i) => ({ idx: i, label: String(i + 1) }))
   const minOptions = Array.from({ length: 60 }, (_, i) => ({ idx: i, label: String(i).padStart(2, '0') }))
   const merOptions = [{ idx: 0, label: 'AM' }, { idx: 1, label: 'PM' }]
@@ -114,7 +115,10 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
                 style={{ borderColor: state.checkpointListOpen ? '#e96c24' : '#a7a7a7' }}
                 onClick={actions.toggleCheckpointList}
               >
-                <span className="flex-1 text-[15px] text-navy">{state.pendingCheckpoint || 'Front Door'}</span>
+                <span className="flex-1 min-w-0 flex items-baseline gap-1.5">
+                  <span className="text-[15px] text-navy">{pendingName}</span>
+                  <span className="text-[12.5px] text-muted">{pendingArea}</span>
+                </span>
                 <svg
                   width="17"
                   height="17"
@@ -131,26 +135,45 @@ export function DetailsScreen({ api }: { api: PrototypeApi }) {
                 </svg>
               </span>
               {state.checkpointListOpen && (
-                <span className="absolute left-0 right-0 top-full mt-1.5 z-[5] border border-[#a7a7a7] rounded-[10px] bg-white overflow-hidden shadow-[0_12px_24px_-8px_rgba(17,17,17,.28)] block">
-                  {checkpointOptions.map((opt, i) => (
-                    <span
-                      key={opt.name}
-                      className="flex items-center gap-2.5 px-3 py-[11px] cursor-pointer"
-                      style={{
-                        borderBottom: i === checkpointOptions.length - 1 ? 'none' : '1px solid #e7e0d9',
-                        background: opt.selected ? '#fef9f6' : '#fff',
-                      }}
-                      onClick={() => actions.pickCheckpoint(opt.name)}
-                    >
-                      <span className="flex-1 text-[15px] text-navy">{opt.name}</span>
-                      {opt.selected && <CheckIcon size={16} stroke="#e96c24" strokeWidth={2.6} />}
-                    </span>
+                <span className="absolute left-0 right-0 top-full mt-1.5 z-[5] border border-[#a7a7a7] rounded-[10px] bg-white overflow-auto max-h-[300px] shadow-[0_12px_24px_-8px_rgba(17,17,17,.28)] block">
+                  <span
+                    className="flex items-center gap-2.5 px-3 py-[11px] cursor-pointer border-b border-[#e7e0d9]"
+                    style={{ background: pcp === 'none' ? '#fef9f6' : '#fff' }}
+                    onClick={() => actions.pickCheckpoint('none')}
+                  >
+                    <span className="flex-1 text-[15px] text-muted">No checkpoint</span>
+                    {pcp === 'none' && <CheckIcon size={16} stroke="#e96c24" strokeWidth={2.6} />}
+                  </span>
+                  {api.checkpointAreas.map((g) => (
+                    <Fragment key={g.area}>
+                      <span className="sticky top-0 block px-3 py-[7px] bg-[#f9f9f9] border-b border-[#e7e0d9] font-bold text-xs text-muted">
+                        {g.area}
+                      </span>
+                      {g.items.map((name, i) => {
+                        const id = `${g.area}|${name}`
+                        const selected = id === pcp
+                        return (
+                          <span
+                            key={id}
+                            className="flex items-center gap-2.5 px-3 py-[11px] cursor-pointer"
+                            style={{
+                              borderBottom: i === g.items.length - 1 ? 'none' : '1px solid #e7e0d9',
+                              background: selected ? '#fef9f6' : '#fff',
+                            }}
+                            onClick={() => actions.pickCheckpoint(id)}
+                          >
+                            <span className="flex-1 text-[15px] text-navy">{name}</span>
+                            {selected && <CheckIcon size={16} stroke="#e96c24" strokeWidth={2.6} />}
+                          </span>
+                        )
+                      })}
+                    </Fragment>
                   ))}
                 </span>
               )}
             </span>
             <span className="block text-[12.5px] text-muted mt-1.5">
-              Originally captured: {state.reportFrom === 'checkpoint' ? 'Front Door' : 'None set'}
+              Originally captured: {state.reportFrom === 'checkpoint' ? 'Front Door · Main Entrance' : 'None set'}
             </span>
           </span>
         </div>

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5d6268"/>
+      <stop offset="1" stop-color="#43474c"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6f6c66"/>
+      <stop offset="1" stop-color="#3e3c39"/>
+    </linearGradient>
+    <linearGradient id="day" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef3f6"/>
+      <stop offset="0.6" stop-color="#cfd9df"/>
+      <stop offset="1" stop-color="#9aa39a"/>
+    </linearGradient>
+    <linearGradient id="door" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7d8790"/>
+      <stop offset="1" stop-color="#5b646c"/>
+    </linearGradient>
+    <linearGradient id="spill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f1e6" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#f4f1e6" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c49a62"/>
+      <stop offset="1" stop-color="#94703f"/>
+    </linearGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.45" r="0.75">
+      <stop offset="0.6" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".45"/>
+    </radialGradient>
+  </defs>
+  <!-- back wall and floor -->
+  <rect width="480" height="480" fill="url(#wall)"/>
+  <rect y="330" width="480" height="150" fill="url(#floor)"/>
+  <path d="M0 330 H480" stroke="#2f3134" stroke-width="3"/>
+  <!-- yellow safety line on floor -->
+  <path d="M0 410 L480 392" stroke="#d9b232" stroke-width="10" opacity=".8"/>
+  <!-- door frame -->
+  <rect x="96" y="70" width="252" height="262" fill="#2c2f33"/>
+  <!-- daylight through opening -->
+  <rect x="104" y="78" width="236" height="254" fill="url(#day)"/>
+  <rect x="104" y="250" width="236" height="82" fill="#8f978b" opacity=".7"/>
+  <!-- door leaf swung open -->
+  <path d="M104 78 L214 98 L214 318 L104 332 Z" fill="url(#door)"/>
+  <path d="M120 120 L200 132 M120 170 L200 178 M120 220 L200 225 M120 270 L200 272" stroke="#4d555c" stroke-width="3"/>
+  <rect x="196" y="196" width="8" height="26" rx="2" fill="#2b2e31"/>
+  <!-- warning sign -->
+  <rect x="372" y="120" width="70" height="52" rx="3" fill="#e9c43a"/>
+  <rect x="380" y="132" width="54" height="7" fill="#2b2b2b"/>
+  <rect x="380" y="146" width="40" height="6" fill="#2b2b2b"/>
+  <rect x="380" y="157" width="46" height="6" fill="#2b2b2b"/>
+  <!-- light spill on floor -->
+  <path d="M104 332 L340 332 L420 480 L40 480 Z" fill="url(#spill)"/>
+  <!-- wooden crate wedging the door -->
+  <g transform="translate(176 268)">
+    <path d="M0 22 L74 10 L112 26 L38 40 Z" fill="#d8b07a"/>
+    <path d="M0 22 L38 40 L38 98 L0 82 Z" fill="#8a6638"/>
+    <path d="M38 40 L112 26 L112 84 L38 98 Z" fill="url(#wood)"/>
+    <path d="M38 58 L112 45 M38 78 L112 64" stroke="#7a5a30" stroke-width="3"/>
+    <path d="M0 42 L38 59 M0 62 L38 79" stroke="#6d4f29" stroke-width="3"/>
+    <path d="M40 42 L110 82 M110 28 L40 96" stroke="#7a5a30" stroke-width="3" opacity=".6"/>
+  </g>
+  <ellipse cx="236" cy="372" rx="78" ry="8" fill="#000" opacity=".25"/>
+  <!-- overhead lamp -->
+  <rect x="210" y="26" width="60" height="10" rx="3" fill="#1f2124"/>
+  <rect x="216" y="36" width="48" height="5" fill="#fff6d8" opacity=".9"/>
+  <rect width="480" height="480" fill="url(#vig)"/>
+</svg>

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fb6c8"/>
+      <stop offset="1" stop-color="#d9e1e6"/>
+    </linearGradient>
+    <linearGradient id="asphalt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a5c5f"/>
+      <stop offset="1" stop-color="#3a3b3d"/>
+    </linearGradient>
+    <linearGradient id="bark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7a5a3a"/>
+      <stop offset="1" stop-color="#4e3721"/>
+    </linearGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.6" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".4"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="480" fill="url(#sky)"/>
+  <!-- distant trees and building -->
+  <path d="M0 210 Q40 150 90 190 Q130 140 180 185 Q230 150 270 195 L270 230 L0 230 Z" fill="#4f6b4a"/>
+  <rect x="290" y="150" width="190" height="80" fill="#b7aa96"/>
+  <rect x="290" y="150" width="190" height="10" fill="#8e826f"/>
+  <g fill="#6f7c86"><rect x="305" y="175" width="28" height="22"/><rect x="345" y="175" width="28" height="22"/><rect x="385" y="175" width="28" height="22"/><rect x="425" y="175" width="28" height="22"/></g>
+  <!-- parking lot -->
+  <path d="M0 230 H480 V480 H0 Z" fill="url(#asphalt)"/>
+  <g stroke="#e9e6dc" stroke-width="5" opacity=".85">
+    <path d="M60 480 L120 240"/><path d="M190 480 L210 240"/><path d="M320 480 L300 240"/><path d="M450 480 L390 240"/>
+  </g>
+  <!-- fire lane hatching -->
+  <path d="M0 400 L480 380 L480 420 L0 445 Z" fill="#c9382b" opacity=".55"/>
+  <!-- fallen trunk diagonally across bays -->
+  <path d="M-20 300 L500 360 L500 392 L-20 334 Z" fill="url(#bark)"/>
+  <path d="M-20 308 L500 368" stroke="#8b6a47" stroke-width="3" opacity=".6"/>
+  <ellipse cx="490" cy="376" rx="12" ry="17" fill="#c9a77c"/>
+  <ellipse cx="490" cy="376" rx="6" ry="9" fill="#a8845a"/>
+  <!-- branches and foliage -->
+  <g stroke="#55402a" stroke-width="7" stroke-linecap="round" fill="none">
+    <path d="M60 314 L20 260"/><path d="M120 320 L100 255"/><path d="M180 328 L215 270"/><path d="M110 322 L80 390"/><path d="M200 330 L240 400"/>
+  </g>
+  <g fill="#3f6334">
+    <circle cx="25" cy="255" r="34"/><circle cx="95" cy="248" r="38"/><circle cx="215" cy="262" r="32"/>
+    <circle cx="70" cy="395" r="36"/><circle cx="245" cy="400" r="30"/><circle cx="150" cy="275" r="30"/>
+  </g>
+  <g fill="#557c45" opacity=".9">
+    <circle cx="45" cy="240" r="20"/><circle cx="115" cy="232" r="22"/><circle cx="230" cy="250" r="18"/><circle cx="90" cy="380" r="20"/>
+  </g>
+  <rect width="480" height="480" fill="url(#vig)"/>
+</svg>

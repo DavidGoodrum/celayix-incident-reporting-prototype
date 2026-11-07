@@ -7,6 +7,7 @@ import { DetailsScreen } from './screens/DetailsScreen'
 import { ReportsScreen } from './screens/ReportsScreen'
 import { ReportDetailScreen } from './screens/ReportDetailScreen'
 import { DrawerScreen } from './screens/DrawerScreen'
+import { PastReportDetailScreen } from './screens/PastReportDetailScreen'
 import { EmergencyScreen } from './screens/EmergencyScreen'
 
 function ActiveScreen({ api }: { api: ReturnType<typeof usePrototypeState> }) {
@@ -26,6 +27,8 @@ function ActiveScreen({ api }: { api: ReturnType<typeof usePrototypeState> }) {
     case 'reportProcessing':
     case 'reportSynced':
       return <ReportDetailScreen api={api} />
+    case 'pastDetail':
+      return <PastReportDetailScreen api={api} />
     case 'drawer':
       return <DrawerScreen api={api} />
     default:
