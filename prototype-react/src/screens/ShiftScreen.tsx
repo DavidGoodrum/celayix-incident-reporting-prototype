@@ -47,7 +47,7 @@ export function ShiftScreen({ api }: { api: PrototypeApi }) {
                 fill="#e96c24"
               />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center font-bold text-lg text-white pointer-events-none">
+            <span className="absolute inset-0 flex items-center justify-center font-normal text-lg text-white pointer-events-none">
               Dashboard
             </span>
             <span className="flex-1" />
@@ -161,7 +161,7 @@ export function ShiftScreen({ api }: { api: PrototypeApi }) {
                   fill="#fff"
                 />
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center font-bold text-lg text-navy pointer-events-none">
+              <span className="absolute inset-0 flex items-center justify-center font-normal text-lg text-navy pointer-events-none">
                 Dashboard
               </span>
               <span className="flex-1" />

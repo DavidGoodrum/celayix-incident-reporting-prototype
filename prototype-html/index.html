@@ -61,7 +61,47 @@
    This file is inlined into index.html for the standalone deliverable;
    kept separate here only while drafting for easier editing. */
 
-const CHECKPOINTS = ['Front Door', 'Reception', 'Courtyard', 'North Parking Lot'];
+// Checkpoints grouped by the areas set up when the tour was built, so
+// same-named checkpoints (Front Door, Fire Exit) stay distinguishable.
+// A selected checkpoint is stored as 'Area|Name'.
+const CP_AREAS = [
+  { area: 'Main Entrance', items: ['Front Door', 'Lobby', 'Reception Desk'] },
+  { area: 'East Wing', items: ['Gallery 1', 'Gallery 2', 'Fire Exit'] },
+  { area: 'West Wing', items: ['Gallery 3', 'Fire Exit', 'Staff Room'] },
+  { area: 'Annex', items: ['Front Door', 'Archive Room'] },
+  { area: 'Loading Dock', items: ['Dock Door', 'Freight Elevator'] },
+  { area: 'North Parking Lot', items: ['Entrance Gate', 'Fire Lane'] },
+];
+const DEFAULT_CP = 'Main Entrance|Front Door';
+
+// Example photos used for attachments the guard adds (cycled by index).
+const SAMPLE_PHOTOS = [
+  { src: 'assets/fallen-tree-parking.svg', alt: 'Fallen tree across the north parking bays' },
+  { src: 'assets/fallen-tree-car.svg', alt: 'Branches resting on a parked car' },
+];
+const samplePhoto = (i) => SAMPLE_PHOTOS[i % SAMPLE_PHOTOS.length];
+
+// Earlier reports shown in report history (read-only examples).
+const PAST_REPORTS = [
+  {
+    id: 'p1', title: 'Loading bay door propped open', category: 'Access control', priority: 'Normal',
+    time: '5:48 PM', syncedAt: '5:49 PM',
+    preview: 'Loading bay door was propped open with a crate, no staff nearby…',
+    text: 'Loading bay door was propped open with a crate, no staff nearby. Moved the crate inside and closed the door. It latches fine.',
+    enhanced: 'The loading bay door at Police Museum was found propped open with a wooden crate and left unattended. The guard removed the crate and secured the door; the latch is working.',
+    meta: 'Police Museum · shift', byline: 'A. Quijada · Police Museum · Current Shift',
+    photos: [{ src: 'assets/loading-bay-door.svg', alt: 'Loading bay door propped open with a crate' }],
+  },
+  {
+    id: 'p2', title: 'Light out above west stairwell', category: 'Facility', priority: 'Low',
+    time: '4:55 PM', syncedAt: '4:56 PM',
+    preview: 'Light out above the west stairwell, second fixture from the door…',
+    text: 'Light out above the west stairwell, second fixture from the door. Stairwell is dim but still passable.',
+    enhanced: 'A light fixture above the west stairwell (second from the door) is out. The stairwell remains passable but is poorly lit; maintenance should replace the fixture.',
+    meta: 'Courtyard · Perimeter Sweep', byline: 'A. Quijada · Police Museum · Perimeter Sweep · Courtyard',
+    photos: [],
+  },
+];
 const DICTATED =
   'Tree came down across the north parking spaces, blocking three bays and the fire lane. Branches are on a parked car.';
 
@@ -121,6 +161,8 @@ function initialState() {
     tpMer: 1,
     justSubmitted: false,
     bannerDismissed: false,
+    pastId: null,
+    photoIndex: null,
   };
 }
 
@@ -143,7 +185,7 @@ function patch(p) {
 function contextParts() {
   const s = state;
   const tour = s.reportFrom === 'tour' || s.reportFrom === 'checkpoint' ? 'Opening Check' : null;
-  const checkpoint = s.checkpoint || (s.reportFrom === 'checkpoint' ? 'Front Door' : null);
+  const checkpoint = s.checkpoint === 'none' ? null : s.checkpoint ? s.checkpoint.split('|')[1] : (s.reportFrom === 'checkpoint' ? 'Front Door' : null);
   let line1;
   if (!tour && !checkpoint) {
     line1 = s.checkedIn ? 'Police Museum · Current Shift' : 'No active shift';
@@ -313,7 +355,7 @@ const actions = {
         attachments: state.attachments.slice(),
         followUps: [],
       };
-      patch({ report: newReport, screen: 'reportProcessing', justSubmitted: true, bannerDismissed: false });
+      patch({ report: newReport, screen: 'reportProcessing', justSubmitted: true, bannerDismissed: false, photoIndex: null });
     }
   },
   goToReports() { patch({ prevScreen: state.screen, screen: 'reports' }); },
@@ -322,7 +364,11 @@ const actions = {
     if (!back || back === 'reports' || back === 'drawer') back = 'shift';
     patch({ screen: back });
   },
-  openQueuedDetail() { patch({ screen: 'reportProcessing', justSubmitted: false }); },
+  openQueuedDetail() { patch({ screen: 'reportProcessing', justSubmitted: false, photoIndex: null }); },
+  openPast(id) { patch({ screen: 'pastDetail', pastId: id, photoIndex: null }); },
+  backFromPast() { patch({ screen: 'reports', photoIndex: null }); },
+  openPhoto(index) { patch({ photoIndex: index }); },
+  closePhoto() { patch({ photoIndex: null }); },
   doneSubmitted() {
     if (!state.justSubmitted) {
       let back = state.prevScreen;
@@ -486,7 +532,7 @@ function renderShift() {
       ${statusBar('4:12', '#fff')}
       <div class="h-14 flex items-center px-[18px] gap-1.5 relative">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="11"/><path d="M12 17.6a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3zM12 4.2c-2.4 0-4.1 1.5-4.3 3.8h2.3c.1-1.1.8-1.8 2-1.8 1.1 0 1.9.7 1.9 1.7 0 .8-.4 1.3-1.4 2-1.2.8-1.7 1.6-1.6 3v.7h2.2v-.5c0-1 .4-1.5 1.5-2.2 1.3-.9 1.9-1.8 1.9-3.2 0-2.1-1.7-3.5-4.5-3.5z" fill="#e96c24"/></svg>
-        <span class="absolute inset-0 flex items-center justify-center font-bold text-lg text-white pointer-events-none">Dashboard</span>
+        <span class="absolute inset-0 flex items-center justify-center font-normal text-lg text-white pointer-events-none">Dashboard</span>
         <span class="flex-1"></span>
         <span class="relative flex cursor-pointer" data-action="goToReports">${icon.bell('#fff')}</span>
         <span class="ml-1.5">${reportFlagButton('shift', true)}</span>
@@ -553,7 +599,7 @@ function renderShift() {
     ${statusBar('4:53', '#000000')}
     <div class="h-14 flex items-center px-[18px] gap-1.5 relative">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="#000000"><circle cx="12" cy="12" r="11"/><path d="M12 17.6a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3zM12 4.2c-2.4 0-4.1 1.5-4.3 3.8h2.3c.1-1.1.8-1.8 2-1.8 1.1 0 1.9.7 1.9 1.7 0 .8-.4 1.3-1.4 2-1.2.8-1.7 1.6-1.6 3v.7h2.2v-.5c0-1 .4-1.5 1.5-2.2 1.3-.9 1.9-1.8 1.9-3.2 0-2.1-1.7-3.5-4.5-3.5z" fill="#fff"/></svg>
-      <span class="absolute inset-0 flex items-center justify-center font-bold text-lg text-navy pointer-events-none">Dashboard</span>
+      <span class="absolute inset-0 flex items-center justify-center font-normal text-lg text-navy pointer-events-none">Dashboard</span>
       <span class="flex-1"></span>
       <span class="relative flex cursor-pointer" data-action="goToReports">${icon.bell()}</span>
       <span class="ml-1.5">${reportFlagButton('shift', false)}</span>
@@ -659,7 +705,7 @@ function renderNote() {
   <div class="pl-5 flex gap-2 overflow-x-auto bg-[#fcfbf8] flex-none">
     ${s.attachments.map((_, i) => `
       <span class="relative flex-none w-[78px] h-[78px] rounded-lg bg-[#eeeeee] border border-[#e7e0d9] flex items-center justify-center">
-        ${icon.documentStroke('#676767', 24)}
+        <img src="${samplePhoto(i).src}" alt="${samplePhoto(i).alt}" class="absolute inset-0 w-full h-full object-cover rounded-lg block" />
         <span class="absolute -top-1.5 -right-1.5 w-[22px] h-[22px] rounded-full bg-navy text-white flex items-center justify-center font-bold text-[13px] cursor-pointer active:opacity-70" data-action="removeAttachment" data-arg="${i}">×</span>
       </span>`).join('')}
     <span class="flex-none w-[78px] h-[78px] rounded-lg border-[1.5px] border-dashed border-[#a7a7a7] flex flex-col items-center justify-center gap-1.5 mr-5 cursor-pointer active:opacity-70" data-action="openAttachSheet">
@@ -724,7 +770,9 @@ function fieldRow(iconHtml, label, badge, value, note) {
 function renderDetails() {
   const s = state;
   const ctx = contextParts();
-  const checkpointOptions = CHECKPOINTS.map((name) => ({ name, selected: name === (s.pendingCheckpoint || 'Front Door') }));
+  const pcp = s.pendingCheckpoint || (s.reportFrom === 'checkpoint' ? DEFAULT_CP : 'none');
+  const pendingName = pcp === 'none' ? 'No checkpoint' : pcp.split('|')[1];
+  const pendingArea = pcp === 'none' ? '' : pcp.split('|')[0];
 
   return `
   ${statusBar('4:12', '#000000', '#fcfbf8')}
@@ -752,18 +800,26 @@ function renderDetails() {
         <span class="block font-bold text-[15px] text-navy">Checkpoint</span>
         <span class="relative block">
           <span class="flex items-center gap-2 mt-1.5 border rounded-[10px] bg-white px-3 py-2.5 cursor-pointer" style="border-color:${s.checkpointListOpen ? '#e96c24' : '#a7a7a7'}" data-action="toggleCheckpointList">
-            <span class="flex-1 text-[15px] text-navy">${s.pendingCheckpoint || 'Front Door'}</span>
+            <span class="flex-1 min-w-0 flex items-baseline gap-1.5"><span class="text-[15px] text-navy">${pendingName}</span><span class="text-[12.5px] text-muted">${pendingArea}</span></span>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-none" style="transform:${s.checkpointListOpen ? 'rotate(180deg)' : 'none'}"><path d="m6 9 6 6 6-6"/></svg>
           </span>
           ${s.checkpointListOpen ? `
-          <span class="absolute left-0 right-0 top-full mt-1.5 z-[5] border border-[#a7a7a7] rounded-[10px] bg-white overflow-hidden shadow-[0_12px_24px_-8px_rgba(17,17,17,.28)] block">
-            ${checkpointOptions.map((opt, i) => `
-              <span class="flex items-center gap-2.5 px-3 py-[11px] cursor-pointer" style="border-bottom:${i === checkpointOptions.length - 1 ? 'none' : '1px solid #e7e0d9'};background:${opt.selected ? '#fef9f6' : '#fff'}" data-action="pickCheckpoint" data-arg="${opt.name}">
-                <span class="flex-1 text-[15px] text-navy">${opt.name}</span>${opt.selected ? icon.check('#e96c24', 16, 2.6) : ''}
-              </span>`).join('')}
+          <span class="absolute left-0 right-0 top-full mt-1.5 z-[5] border border-[#a7a7a7] rounded-[10px] bg-white overflow-auto max-h-[300px] shadow-[0_12px_24px_-8px_rgba(17,17,17,.28)] block">
+            <span class="flex items-center gap-2.5 px-3 py-[11px] cursor-pointer border-b border-[#e7e0d9]" style="background:${pcp === 'none' ? '#fef9f6' : '#fff'}" data-action="pickCheckpoint" data-arg="none">
+              <span class="flex-1 text-[15px] text-muted">No checkpoint</span>${pcp === 'none' ? icon.check('#e96c24', 16, 2.6) : ''}
+            </span>
+            ${CP_AREAS.map((g) => `
+              <span class="sticky top-0 block px-3 py-[7px] bg-[#f9f9f9] border-b border-[#e7e0d9] font-bold text-xs text-muted">${g.area}</span>
+              ${g.items.map((name, i) => {
+                const id = `${g.area}|${name}`;
+                const sel = id === pcp;
+                return `<span class="flex items-center gap-2.5 px-3 py-[11px] cursor-pointer" style="border-bottom:${i === g.items.length - 1 ? 'none' : '1px solid #e7e0d9'};background:${sel ? '#fef9f6' : '#fff'}" data-action="pickCheckpoint" data-arg="${id}">
+                  <span class="flex-1 text-[15px] text-navy">${name}</span>${sel ? icon.check('#e96c24', 16, 2.6) : ''}
+                </span>`;
+              }).join('')}`).join('')}
           </span>` : ''}
         </span>
-        <span class="block text-[12.5px] text-muted mt-1.5">Originally captured: ${s.reportFrom === 'checkpoint' ? 'Front Door' : 'None set'}</span>
+        <span class="block text-[12.5px] text-muted mt-1.5">Originally captured: ${s.reportFrom === 'checkpoint' ? 'Front Door · Main Entrance' : 'None set'}</span>
       </span>
     </div>
 
@@ -855,15 +911,85 @@ function renderReports() {
         <div class="text-[15.5px] leading-[1.45] text-navy mt-2.5">${preview}</div>
         <div class="text-[13px] text-ink mt-2">Front Door · Opening Check · ${attachmentCount} attachments${followUpCount > 0 ? ` · ${followUpCount} follow-ups` : ''}</div>
       </div>` : ''}
-      <div class="bg-white border border-[#e7e0d9] rounded-lg shadow-[0_0_2px_rgba(0,0,0,.2)] p-[15px] opacity-60">
+      ${PAST_REPORTS.map((p) => `
+      <div class="bg-white border border-[#e7e0d9] rounded-lg shadow-[0_0_2px_rgba(0,0,0,.2)] p-[15px] cursor-pointer active:opacity-70" data-action="openPast" data-arg="${p.id}">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-xs tracking-[.05em] uppercase text-[#0173b4] bg-[rgba(0,188,212,.14)] border border-[rgba(0,188,212,.28)] rounded-full px-2.5 py-0.5">Access Control</span>
-          <span class="text-[13.5px] text-ink">5:48 PM</span>
+          <span class="flex gap-1.5 flex-wrap">${categoryPill(p.category)}${priorityPill(p.priority)}</span>
+          <span class="text-[13.5px] text-ink">${p.time}</span>
         </div>
-        <div class="text-[15.5px] leading-[1.45] text-navy mt-2.5">Loading bay door was propped open with a crate, no staff nearby…</div>
-      </div>
+        <div class="text-[15.5px] leading-[1.45] text-navy mt-2.5">${p.preview}</div>
+        <div class="text-[13px] text-ink mt-2">${p.meta} · ${p.photos.length ? `${p.photos.length} attachment${p.photos.length === 1 ? '' : 's'}` : 'no attachments'}</div>
+      </div>`).join('')}
     </div>
   </div>`;
+}
+
+function categoryPill(label) {
+  return `<span class="font-bold text-xs tracking-[.05em] uppercase text-[#0173b4] bg-[rgba(0,188,212,.14)] border border-[rgba(0,188,212,.28)] rounded-full px-2.5 py-0.5">${label}</span>`;
+}
+function priorityPill(label) {
+  return `<span class="font-bold text-xs tracking-[.05em] uppercase text-ink bg-[#f3f3f3] border border-[#e6e6e6] rounded-full px-2.5 py-0.5">${label}</span>`;
+}
+
+function attachmentsSection(photos) {
+  if (!photos.length) return '';
+  return `
+    <div class="flex items-center gap-2.5 px-5 pt-3">
+      <span class="font-bold text-[13px] tracking-[.06em] uppercase text-ink">Attachments</span>
+      <span class="text-[13px] text-ink">${photos.length}</span>
+    </div>
+    <div class="flex gap-2 px-5 pt-2 flex-wrap">
+      ${photos.map((ph, i) => `<img src="${ph.src}" alt="${ph.alt}" class="flex-none w-[72px] h-[72px] rounded-lg object-cover block border border-[#e7e0d9] bg-[#eeeeee] cursor-pointer active:opacity-70" data-action="openPhoto" data-arg="${i}" />`).join('')}
+    </div>`;
+}
+
+function renderPhotoViewer(photos, title, time) {
+  const s = state;
+  const ph = s.photoIndex != null ? photos[s.photoIndex] : null;
+  if (!ph) return '';
+  return `
+  <div class="absolute inset-0 z-30 bg-black flex flex-col">
+    ${statusBar('4:19', '#fff')}
+    <div class="h-[52px] flex-none flex items-center px-5 relative">
+      <span class="w-10 h-10 -ml-2 flex items-center justify-center cursor-pointer active:opacity-70" data-action="closePhoto">${icon.x('#fff', 22)}</span>
+      <span class="absolute inset-0 flex items-center justify-center text-[16px] text-white pointer-events-none">Photo ${s.photoIndex + 1} of ${photos.length}</span>
+    </div>
+    <div class="flex-1 min-h-0 flex items-center justify-center cursor-pointer" data-action="closePhoto">
+      <img src="${ph.src}" alt="${ph.alt}" class="w-full max-h-full object-contain block" />
+    </div>
+    <div class="px-6 pt-3.5 pb-[30px] flex-none text-center text-[14px] leading-[1.5] text-[rgba(255,255,255,.8)]">${title}<br><span class="text-[rgba(255,255,255,.55)]">Mar 24, 2026 · ${time}</span></div>
+  </div>`;
+}
+
+function renderPastDetail() {
+  const s = state;
+  const p = PAST_REPORTS.find((r) => r.id === s.pastId) || PAST_REPORTS[0];
+  return `
+  ${statusBar('4:19', '#000000', '#fcfbf8')}
+  ${headerRow('Incident report', 'backFromPast')}
+  <div class="bg-[#fcfbf8] flex-1 overflow-auto pb-4">
+    <div class="px-5 pt-4">
+      <div class="font-bold text-[22px] leading-[1.25] text-navy tracking-[-.015em]">${p.title}</div>
+      <div class="flex gap-1.5 mt-3">${categoryPill(p.category)}${priorityPill(p.priority)}</div>
+      <div class="text-[13.5px] leading-[1.6] text-ink mt-2">${p.byline}<br>Mar 24, 2026 · ${p.time}</div>
+    </div>
+    <div class="mx-5 mt-2.5 bg-white border border-[#d4eefd] rounded-lg shadow-[0_0_2px_rgba(0,0,0,.2)] px-[15px] py-2.5">
+      <div class="flex items-center gap-2">${icon.sparkle()}<span class="font-bold text-[13px] tracking-[.05em] uppercase text-accent">Enhanced report</span></div>
+      <div class="text-[15.5px] leading-[1.55] text-navy mt-2.5">${p.enhanced}</div>
+    </div>
+    <div class="mx-5 mt-2.5 bg-white border border-[#e7e0d9] rounded-lg shadow-[0_0_2px_rgba(0,0,0,.2)] px-[15px] py-2.5">
+      <div class="flex items-center gap-2"><span class="font-bold text-[13px] tracking-[.05em] uppercase text-ink">Your note</span><span class="text-[12.5px] text-ink ml-auto">Locked</span></div>
+      <div class="text-[15.5px] leading-[1.55] text-[#333333] mt-2.5">${p.text}</div>
+    </div>
+    ${attachmentsSection(p.photos)}
+  </div>
+  <div class="flex-none bg-[#fcfbf8] shadow-[0_1px_4px_1px_rgba(0,0,0,.1)]">
+    <div class="flex items-center gap-2 px-5 pt-2.5"><span class="text-[13.5px] text-ink">Synced ${p.syncedAt} · visible to your supervisor</span></div>
+    <div class="flex gap-2.5 px-5 pt-2.5 pb-4">
+      <span class="flex-1 flex h-12 rounded-lg bg-brand items-center justify-center font-bold text-[16px] text-white cursor-pointer active:opacity-70 shadow-[0_0_4px_rgba(0,0,0,.3)]" data-action="backFromPast">Done</span>
+    </div>
+  </div>
+  ${renderPhotoViewer(p.photos, p.title, p.time)}`;
 }
 
 function renderReportDetail() {
@@ -875,6 +1001,8 @@ function renderReportDetail() {
   const reportText = report.text || 'Tree came down across the north parking spaces, blocking three bays and the fire lane. Branches are on a parked car.';
   const showSubmitBanner = s.justSubmitted && !s.bannerDismissed && !isSynced;
   const footerText = isSynced ? 'Synced 4:19 PM · visible to your supervisor' : 'Waiting for a connection · saved on this device';
+  const photos = report.attachments.map((_, i) => samplePhoto(i));
+  const viewerTitle = isSynced ? 'Fallen tree blocking north parking' : 'Incident report';
 
   const notifiedBanner = `<div class="flex items-center gap-2.5 mt-2.5 bg-[#ffeeec] border border-[#f4d4d4] rounded-[10px] px-3 py-2">${icon.check('#c62828', 16, 2.6)}<span class="font-bold text-[13.5px] text-[#c62828]">Supervisor notified</span></div>`;
 
@@ -883,10 +1011,10 @@ function renderReportDetail() {
   ${headerRow('Incident report', 'backFromDetail')}
   <div class="bg-[#fcfbf8] flex-1 overflow-auto">
     ${showSubmitBanner ? `
-    <div class="mx-5 mt-3 bg-[#e9f7ff] border border-[#d4eefd] rounded-lg shadow-[0_0_2px_rgba(0,0,0,.2)] px-3.5 py-2.5 flex gap-2.5 items-center">
-      <span class="flex-none w-[22px] h-[22px] rounded-full bg-[#16a085] flex items-center justify-center mt-px">${icon.check('#fff', 13, 3.2)}</span>
-      <span class="flex-1 font-bold text-[14.5px] text-[#0173b4]">Report saved</span>
-      <span class="flex-none w-6 h-6 flex items-center justify-center cursor-pointer active:opacity-70" data-action="dismissBanner">${icon.x()}</span>
+    <div role="status" class="relative bg-[#037e81] text-white p-[23px] min-h-[112px] box-border flex flex-col items-center justify-center gap-2.5 text-center shadow-[0_-1px_4px_rgba(0,0,0,.12)]">
+      <div class="w-9 h-9 rounded-full bg-[rgba(255,255,255,.18)] flex items-center justify-center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.8"/></svg></div>
+      <div class="font-medium text-[14px] leading-5 tracking-[.3px]">Report saved</div>
+      <span class="absolute top-0 right-0 w-10 h-10 flex items-center justify-center cursor-pointer active:opacity-70" data-action="dismissBanner">${icon.x('#fff', 16)}</span>
     </div>` : ''}
 
     ${isSynced ? `
@@ -910,6 +1038,8 @@ function renderReportDetail() {
       <div class="flex items-center gap-2"><span class="font-bold text-[13px] tracking-[.05em] uppercase text-ink">${originalNoteLabel}</span><span class="text-[12.5px] text-ink ml-auto">Locked</span></div>
       <div class="text-[15.5px] leading-[1.55] text-[#333333] mt-2.5">${reportText}</div>
     </div>
+
+    ${attachmentsSection(photos)}
 
     ${hasFollowUps ? `
     <div class="flex items-center gap-2.5 px-5 pt-1.5 mt-1">
@@ -945,7 +1075,8 @@ function renderReportDetail() {
       </span>
       <span class="flex-1 flex h-12 rounded-lg bg-brand items-center justify-center font-bold text-[16px] text-white cursor-pointer active:opacity-70 shadow-[0_0_4px_rgba(0,0,0,.3)]" data-action="doneSubmitted">Done</span>
     </div>
-  </div>`;
+  </div>
+  ${renderPhotoViewer(photos, viewerTitle, '4:12 PM')}`;
 }
 
 function drawerRow(bg, border, iconBg, iconHtml, title, titleColor, subtitle, subtitleColor, action, disabled) {
@@ -1019,6 +1150,7 @@ function renderScreen() {
     case 'reports': return renderReports();
     case 'reportProcessing':
     case 'reportSynced': return renderReportDetail();
+    case 'pastDetail': return renderPastDetail();
     case 'drawer': return renderDrawer();
     default: return '';
   }
@@ -1058,6 +1190,12 @@ function dispatch(action, el, e) {
   switch (action) {
     case 'removeAttachment':
       actions.removeAttachment(Number(el.getAttribute('data-arg')));
+      break;
+    case 'openPast':
+      actions.openPast(el.getAttribute('data-arg'));
+      break;
+    case 'openPhoto':
+      actions.openPhoto(Number(el.getAttribute('data-arg')));
       break;
     case 'pickCheckpoint':
       actions.pickCheckpoint(el.getAttribute('data-arg'));

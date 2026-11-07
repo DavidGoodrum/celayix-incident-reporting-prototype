@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, CHECKPOINTS, Screen, buildDayLabels, initialState } from './types'
+import { AppState, CP_AREAS, Screen, buildDayLabels, initialState } from './types'
 
 const DAYS = buildDayLabels()
 const DICTATED =
@@ -280,7 +280,7 @@ export function usePrototypeState() {
         attachments: s.attachments.slice(),
         followUps: [],
       }
-      return { ...s, report: newReport, screen: 'reportProcessing', justSubmitted: true, bannerDismissed: false }
+      return { ...s, report: newReport, screen: 'reportProcessing', justSubmitted: true, bannerDismissed: false, photoIndex: null }
     })
   }, [])
 
@@ -292,7 +292,11 @@ export function usePrototypeState() {
       return { ...s, screen: back }
     })
   }, [])
-  const openQueuedDetail = useCallback(() => patch({ screen: 'reportProcessing', justSubmitted: false }), [patch])
+  const openQueuedDetail = useCallback(() => patch({ screen: 'reportProcessing', justSubmitted: false, photoIndex: null }), [patch])
+  const openPast = useCallback((id: string) => patch({ screen: 'pastDetail', pastId: id, photoIndex: null }), [patch])
+  const backFromPast = useCallback(() => patch({ screen: 'reports', photoIndex: null }), [patch])
+  const openPhoto = useCallback((index: number) => patch({ photoIndex: index }), [patch])
+  const closePhoto = useCallback(() => patch({ photoIndex: null }), [patch])
 
   const doneSubmitted = useCallback(() => {
     setState((s) => {
@@ -347,7 +351,8 @@ export function usePrototypeState() {
   const ctx = useMemo(() => {
     const s = state
     const tour = s.reportFrom === 'tour' || s.reportFrom === 'checkpoint' ? 'Opening Check' : null
-    const checkpoint = s.checkpoint || (s.reportFrom === 'checkpoint' ? 'Front Door' : null)
+    const checkpoint =
+      s.checkpoint === 'none' ? null : s.checkpoint ? s.checkpoint.split('|')[1] : s.reportFrom === 'checkpoint' ? 'Front Door' : null
     let line1: string
     if (!tour && !checkpoint) {
       line1 = s.checkedIn ? 'Police Museum · Current Shift' : 'No active shift'
@@ -364,7 +369,7 @@ export function usePrototypeState() {
   return {
     state,
     days: DAYS,
-    checkpoints: CHECKPOINTS,
+    checkpointAreas: CP_AREAS,
     ctx,
     report: state.report,
     isReportProcessing,
@@ -405,6 +410,10 @@ export function usePrototypeState() {
       goToReports,
       backFromReports,
       openQueuedDetail,
+      openPast,
+      backFromPast,
+      openPhoto,
+      closePhoto,
       backFromDetail,
       doneSubmitted,
       dismissBanner,

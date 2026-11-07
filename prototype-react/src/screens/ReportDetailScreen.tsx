@@ -1,6 +1,8 @@
 import { StatusBar } from '../components/StatusBar'
 import { HeaderRow } from '../components/HeaderRow'
 import { CheckIcon, ProcessingIcon, SparkleIcon, XIcon } from '../components/Icons'
+import { AttachmentsSection, PhotoViewer } from '../components/ReportPieces'
+import { samplePhoto } from '../types'
 import type { PrototypeApi } from '../state'
 
 export function ReportDetailScreen({ api }: { api: PrototypeApi }) {
@@ -14,6 +16,8 @@ export function ReportDetailScreen({ api }: { api: PrototypeApi }) {
   const footerText = isReportSynced
     ? 'Synced 4:19 PM · visible to your supervisor'
     : 'Waiting for a connection · saved on this device'
+  const photos = report.attachments.map((_, i) => samplePhoto(i))
+  const viewerTitle = isReportSynced ? 'Fallen tree blocking north parking' : 'Incident report'
 
   return (
     <>
@@ -21,13 +25,22 @@ export function ReportDetailScreen({ api }: { api: PrototypeApi }) {
       <HeaderRow title="Incident report" onBack={actions.backFromDetail} />
       <div className="bg-[#fcfbf8] flex-1 overflow-auto">
         {showSubmitBanner && (
-          <div className="mx-5 mt-3 bg-[#e9f7ff] border border-[#d4eefd] rounded-lg shadow-[0_0_2px_rgba(0,0,0,.2)] px-3.5 py-2.5 flex gap-2.5 items-center">
-            <span className="flex-none w-[22px] h-[22px] rounded-full bg-[#16a085] flex items-center justify-center mt-px">
-              <CheckIcon size={13} strokeWidth={3.2} />
-            </span>
-            <span className="flex-1 font-bold text-[14.5px] text-[#0173b4]">Report saved</span>
-            <span className="flex-none w-6 h-6 flex items-center justify-center cursor-pointer active:opacity-70" onClick={actions.dismissBanner}>
-              <XIcon />
+          <div
+            role="status"
+            className="relative bg-[#037e81] text-white p-[23px] min-h-[112px] box-border flex flex-col items-center justify-center gap-2.5 text-center shadow-[0_-1px_4px_rgba(0,0,0,.12)]"
+          >
+            <div className="w-9 h-9 rounded-full bg-[rgba(255,255,255,.18)] flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="m8 12.5 2.7 2.7L16 9.8" />
+              </svg>
+            </div>
+            <div className="font-medium text-[14px] leading-5 tracking-[.3px]">Report saved</div>
+            <span
+              className="absolute top-0 right-0 w-10 h-10 flex items-center justify-center cursor-pointer active:opacity-70"
+              onClick={actions.dismissBanner}
+            >
+              <XIcon size={16} stroke="#fff" />
             </span>
           </div>
         )}
@@ -86,6 +99,8 @@ export function ReportDetailScreen({ api }: { api: PrototypeApi }) {
           </div>
           <div className="text-[15.5px] leading-[1.55] text-[#333333] mt-2.5">{reportText}</div>
         </div>
+
+        <AttachmentsSection photos={photos} onOpen={actions.openPhoto} />
 
         {hasFollowUps && (
           <>
@@ -175,6 +190,7 @@ export function ReportDetailScreen({ api }: { api: PrototypeApi }) {
           </span>
         </div>
       </div>
+      <PhotoViewer photos={photos} index={state.photoIndex} title={viewerTitle} time="4:12 PM" onClose={actions.closePhoto} />
     </>
   )
 }

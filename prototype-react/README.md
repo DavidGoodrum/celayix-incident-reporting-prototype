@@ -14,7 +14,8 @@ Open the printed local URL (defaults to http://localhost:5173).
 ## Structure
 
 - `src/state.ts` — the whole app state machine as a single hook (`usePrototypeState`), mirroring the original's screen/report/emergency/time-picker state.
-- `src/screens/*` — one component per screen (Shift, Tour, Checkpoint, Note/compose, Details, Reports, ReportDetail, Drawer, Emergency).
+- `src/screens/*` — one component per screen (Shift, Tour, Checkpoint, Note/compose, Details, Reports, ReportDetail, PastReportDetail, Drawer, Emergency).
+- `public/assets/*` — example photos used for attachments and the report-history examples (illustrations, not real photos).
 - `src/components/*` — small shared pieces (status bar, header row, icon set, the long-press report/flag button).
 - `src/App.tsx` — phone-frame chrome and screen switching.
 
