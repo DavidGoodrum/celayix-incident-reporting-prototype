@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b5c6d3"/>
+      <stop offset="1" stop-color="#e3e8eb"/>
+    </linearGradient>
+    <linearGradient id="asphalt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5f6164"/>
+      <stop offset="1" stop-color="#343538"/>
+    </linearGradient>
+    <linearGradient id="bark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7d5d3c"/>
+      <stop offset="1" stop-color="#4a3420"/>
+    </linearGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.6" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".4"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="480" fill="url(#sky)"/>
+  <path d="M0 190 Q70 135 140 178 Q210 128 280 172 Q350 138 420 176 Q450 160 480 168 L480 225 L0 225 Z" fill="#4f6b49"/>
+  <rect y="225" width="480" height="255" fill="url(#asphalt)"/>
+  <!-- fire lane edge line and lettering -->
+  <path d="M120 480 L205 225 M360 480 L285 225" stroke="#e8c33a" stroke-width="7"/>
+  <g fill="#e8c33a" opacity=".9">
+    <path d="M196 400 h18 v6 h-12 v8 h10 v6 h-10 v14 h-6 z"/>
+    <path d="M220 400 h6 v34 h-6 z"/>
+    <path d="M232 400 h14 a8 8 0 0 1 0 18 l9 16 h-7 l-8 -15 h-2 v15 h-6 z m6 6 v7 h8 a3.5 3.5 0 0 0 0 -7 z"/>
+    <path d="M262 400 h18 v6 h-12 v8 h10 v6 h-10 v8 h12 v6 h-18 z"/>
+  </g>
+  <!-- cut log rounds stacked on the verge -->
+  <g>
+    <rect x="18" y="300" width="96" height="44" rx="8" fill="url(#bark)"/>
+    <ellipse cx="114" cy="322" rx="14" ry="22" fill="#d8b98a"/>
+    <ellipse cx="114" cy="322" rx="8" ry="13" fill="none" stroke="#b08a57" stroke-width="2"/>
+    <rect x="30" y="262" width="80" height="40" rx="8" fill="url(#bark)"/>
+    <ellipse cx="110" cy="282" rx="12" ry="20" fill="#d8b98a"/>
+    <ellipse cx="110" cy="282" rx="6" ry="11" fill="none" stroke="#b08a57" stroke-width="2"/>
+    <rect x="12" y="346" width="110" height="46" rx="8" fill="url(#bark)"/>
+    <ellipse cx="122" cy="369" rx="15" ry="23" fill="#d8b98a"/>
+    <ellipse cx="122" cy="369" rx="8" ry="13" fill="none" stroke="#b08a57" stroke-width="2"/>
+  </g>
+  <!-- sawdust and a few twigs -->
+  <g fill="#c9a874" opacity=".8">
+    <circle cx="150" cy="380" r="3"/><circle cx="160" cy="372" r="2"/><circle cx="142" cy="392" r="2.5"/><circle cx="170" cy="388" r="2"/>
+  </g>
+  <path d="M150 330 l30 -10 M165 326 l8 -12" stroke="#5a4129" stroke-width="4" stroke-linecap="round"/>
+  <!-- traffic cones -->
+  <g>
+    <path d="M392 380 l18 -70 h10 l18 70 z" fill="#e96c24"/>
+    <path d="M398 356 h34 l-4 -14 h-26 z" fill="#fff"/>
+    <rect x="384" y="378" width="62" height="10" rx="3" fill="#c4561a"/>
+    <path d="M316 300 l12 -46 h7 l12 46 z" fill="#e96c24"/>
+    <path d="M320 284 h23 l-3 -9 h-17 z" fill="#fff"/>
+    <rect x="310" y="298" width="42" height="7" rx="2" fill="#c4561a"/>
+  </g>
+  <!-- tree stump at the lot edge -->
+  <path d="M430 226 h34 l6 -26 c-8 -10 -38 -10 -46 0 z" fill="url(#bark)"/>
+  <ellipse cx="447" cy="200" rx="23" ry="7" fill="#d8b98a"/>
+  <rect width="480" height="480" fill="url(#vig)"/>
+</svg>

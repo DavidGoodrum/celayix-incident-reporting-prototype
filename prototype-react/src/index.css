@@ -1,22 +1,87 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* TEAMXP Design System tokens (colour, shadow and type roles the components read), from the library's tokens.css. */
+:root {
+  --cx-primary: #e96c24;
+  --cx-bg-primary: #fcf0e9;
+  --cx-bg-primary-alt: #fef9f6;
+  --cx-bg: #fcfbf8;
+  --cx-secondary: #007eb5;
+  --cx-link: #0f97d7;
+  --cx-mono-100: #000000;
+  --cx-mono-90: #333333;
+  --cx-mono-80: #676767;
+  --cx-mono-70: #8f8f8f;
+  --cx-mono-60: #a7a7a7;
+  --cx-mono-50: #bcbcbc;
+  --cx-mono-40: #d2d2d2;
+  --cx-mono-30: #e6e6e6;
+  --cx-mono-25: #eeeeee;
+  --cx-mono-20: #f3f3f3;
+  --cx-mono-10: #f9f9f9;
+  --cx-mono-5: #fdfdfd;
+  --cx-mono-0: #ffffff;
+  --cx-success: #16a085;
+  --cx-success-dark: #037e81;
+  --cx-success-soft: #d5efea;
+  --cx-success-light: #e6f5f2;
+  --cx-success-pill-bg: #eef7f5;
+  --cx-error: #c0392b;
+  --cx-error-alt: #d0021b;
+  --cx-error-strong: #c62828;
+  --cx-error-input: #d9001b;
+  --cx-error-soft: #f4d4d4;
+  --cx-error-pill-bg: #faefef;
+  --cx-error-alert-bg: #fbeceb;
+  --cx-warning-strong: #de6017;
+  --cx-warning-mid: #ea8b2e;
+  --cx-warning-soft: #fce1cf;
+  --cx-warning-light: #fff3eb;
+  --cx-warning-pill-bg: #fff3e1;
+  --cx-info-dark: #0173b4;
+  --cx-info-soft: #d4eefd;
+  --cx-info-light: #e9f7ff;
+  --cx-ai-bg: #f6fafc;
+  --cx-ai-border: #c6e8fc;
+  --cx-subtle-border: #e7e0d9;
+  --cx-break: #ff9912;
+  --text-disabled-action: var(--cx-mono-60);
+  --icon-disabled: var(--cx-mono-40);
+  --overlay-scrim: rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 0 2px rgba(0, 0, 0, 0.2);
+  --shadow-card-raised: 0 0 4px rgba(0, 0, 0, 0.2);
+  --shadow-button: 0 0 4px rgba(0, 0, 0, 0.3);
+  --shadow-pressed: 0 0 5px -1px rgba(0, 0, 0, 0.3);
+  --shadow-footer: 0 1px 4px 1px rgba(0, 0, 0, 0.1);
+  --shadow-popup: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --shadow-avatar: 0 0 1px 1px rgba(0, 0, 0, 0.22);
+  --shadow-slider: 0 0 3px rgba(0, 0, 0, 0.1);
+  --shadow-knob: 0 0 2px rgba(0, 0, 0, 0.3);
+  --motion-fast: 120ms ease-out;
+  --font-body: 'Roboto', -apple-system, 'Segoe UI', sans-serif;
+}
 
-@layer base {
-  html,
-  body {
-    background: #f1f2f4;
+html,
+body {
+  margin: 0;
+  background: #e9e9ec;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+.cx-field::placeholder {
+  color: var(--cx-mono-70);
+  opacity: 1;
+}
+
+/* Turning glyph (the library's fa-spin): refresh while loading, the "Sending" spinner. */
+.cx-spin {
+  animation: cx-spin 1s linear infinite;
+}
+@keyframes cx-spin {
+  to {
+    transform: rotate(360deg);
   }
-}
-
-.no-scrollbar {
-  scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.wheel-mask {
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 25%, #000 75%, transparent);
-  mask-image: linear-gradient(180deg, transparent, #000 25%, #000 75%, transparent);
 }
